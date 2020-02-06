@@ -15,6 +15,11 @@
       "id": "mergeProfilePropertyName",
       "type": "string",
       "multivalued": false
+    },
+    {
+      "id": "condition",
+      "type": "Condition",
+      "multivalued": false
     }
   ]
 }

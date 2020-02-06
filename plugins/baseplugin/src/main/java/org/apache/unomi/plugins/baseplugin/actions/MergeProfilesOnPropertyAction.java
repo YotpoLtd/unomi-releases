@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -84,9 +85,20 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
         excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
 
+        Condition extraCondition = (Condition) action.getParameterValues().get("condition");
+
+        List<Condition> subConditions = new ArrayList<>();
+        subConditions.add(propertyCondition);
+        subConditions.add(excludeMergedProfilesCondition);
+
+        if (extraCondition != null) {
+            extraCondition.setConditionType(definitionsService.getConditionType(extraCondition.getConditionTypeId()));
+            subConditions.add(extraCondition);
+        }
+
         Condition c = new Condition(definitionsService.getConditionType("booleanCondition"));
         c.setParameter("operator", "and");
-        c.setParameter("subConditions", Arrays.asList(propertyCondition, excludeMergedProfilesCondition));
+        c.setParameter("subConditions", subConditions);
 
         final List<Profile> profiles = persistenceService.query(c, "properties.firstVisit", Profile.class);
 
