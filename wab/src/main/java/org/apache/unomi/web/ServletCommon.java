@@ -67,8 +67,12 @@ public class ServletCommon {
         if (events != null && !(profile instanceof Persona)) {
             for (Event event : events) {
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
-                            event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                    Event eventToSend;
+                    if (event.getItemId() != null) {
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                    } else {
+                        eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                    }
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.warn("Event is not allowed : {}", event.getEventType());
                         continue;
