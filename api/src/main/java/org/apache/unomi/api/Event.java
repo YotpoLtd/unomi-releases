@@ -74,7 +74,7 @@ public class Event extends Item implements TimestampedItem {
     /**
      * Instantiates a new Event.
      *
-     * @param itemId     the event item id identifier
+     * @param itemId    the event item id identifier
      * @param eventType the event type identifier
      * @param session   the session associated with the event
      * @param profile   the profile associated with the event

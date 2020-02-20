@@ -52,6 +52,8 @@ public class Rule extends MetadataItem {
 
     private boolean raiseEventOnlyOnceForSession = false;
 
+    private boolean raiseEventOnlyOnce = false;
+
     private int priority;
 
     /**
@@ -130,6 +132,15 @@ public class Rule extends MetadataItem {
      */
     public boolean isRaiseEventOnlyOnceForProfile() {
         return raiseEventOnlyOnceForProfile;
+    }
+
+    /**
+     * Determines whether the event raised when the rule is triggered should only be raised once
+     *
+     * @return {@code true} if the rule-triggered event should only be raised once per profile
+     */
+    public boolean isRaiseEventOnlyOnce() {
+        return raiseEventOnlyOnce;
     }
 
     /**

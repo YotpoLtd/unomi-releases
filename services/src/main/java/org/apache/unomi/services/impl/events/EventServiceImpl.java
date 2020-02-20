@@ -250,6 +250,11 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    public boolean hasEventAlreadyBeenRaised(Event event) {
+        Event pastEvent = this.persistenceService.load(event.getItemId(), Event.class);
+        return pastEvent != null && pastEvent.getVersion() > 1;
+    }
+
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
         List<Condition> conditions = new ArrayList<Condition>();
 
