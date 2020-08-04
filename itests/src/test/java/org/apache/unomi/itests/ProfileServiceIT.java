@@ -27,6 +27,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+
 import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,9 +59,9 @@ public class ProfileServiceIT extends BaseIT {
 
     @Test
     public void testGetProfileWithScrolling() throws InterruptedException {
-        final String profileIdOne = "test-profile-id";
-        final String profileIdTwo = "test-profile-id";
-        final String profileIdThree = "test-profile-id";
+        final String profileIdOne = "test-profile-id-one";
+        final String profileIdTwo = "test-profile-id-two";
+        final String profileIdThree = "test-profile-id-three";
 
         Profile profileOne = new Profile();
         Profile profileTwo = new Profile();
@@ -94,5 +95,4 @@ public class ProfileServiceIT extends BaseIT {
         profiles = profileService.search(queryCont, Profile.class);
         assertEquals(0, profiles.getList().size());
     }
-
 }
