@@ -75,43 +75,43 @@ public class ProfileServiceIT extends BaseIT {
         LOGGER.info("Profile deleted successfully.");
     }
 
-//    @Test
-//    public void testGetProfileWithScrolling() throws InterruptedException {
-//        final String profileIdOne = "test-profile-id-one";
-//        final String profileIdTwo = "test-profile-id-two";
-//        final String profileIdThree = "test-profile-id-three";
-//
-//        Profile profileOne = new Profile();
-//        Profile profileTwo = new Profile();
-//        Profile profileThree = new Profile();
-//
-//        profileOne.setItemId(profileIdOne);
-//        profileTwo.setItemId(profileIdTwo);
-//        profileThree.setItemId(profileIdThree);
-//
-//        profileService.save(profileOne);
-//        profileService.save(profileTwo);
-//        profileService.save(profileThree);
-//
-//        Thread.sleep(4000); // Make sure Elastic is updated
-//
-//        Query query = new Query();
-//        query.setLimit(2);
-//        query.setScrollTimeValidity("10m");
-//
-//        PartialList<Profile> profiles = profileService.search(query, Profile.class);
-//        assertEquals(2, profiles.getList().size());
-//
-//        Query queryCont = new Query();
-//        queryCont.setScrollTimeValidity("10m");
-//        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
-//
-//        profiles = profileService.search(queryCont, Profile.class);
-//        assertEquals(1, profiles.getList().size());
-//
-//        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
-//        profiles = profileService.search(queryCont, Profile.class);
-//        assertEquals(0, profiles.getList().size());
-//    }
+    @Test
+    public void testGetProfileWithScrolling() throws InterruptedException {
+        final String profileIdOne = "testGetProfileWithScrolling-id-one";
+        final String profileIdTwo = "testGetProfileWithScrolling-id-two";
+        final String profileIdThree = "testGetProfileWithScrolling-id-three";
+
+        Profile profileOne = new Profile();
+        Profile profileTwo = new Profile();
+        Profile profileThree = new Profile();
+
+        profileOne.setItemId(profileIdOne);
+        profileTwo.setItemId(profileIdTwo);
+        profileThree.setItemId(profileIdThree);
+
+        profileService.save(profileOne);
+        profileService.save(profileTwo);
+        profileService.save(profileThree);
+
+        Thread.sleep(4000); // Make sure Elastic is updated
+
+        Query query = new Query();
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+
+        PartialList<Profile> profiles = profileService.search(query, Profile.class);
+        assertEquals(2, profiles.getList().size());
+
+        Query queryCont = new Query();
+        queryCont.setScrollTimeValidity("10m");
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(1, profiles.getList().size());
+
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(0, profiles.getList().size());
+    }
 
 }
