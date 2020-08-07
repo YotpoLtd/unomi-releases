@@ -26,6 +26,8 @@ import org.apache.unomi.api.PartialList;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.After;
+import org.junit.Before;
+
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -57,7 +59,7 @@ public class ProfileServiceIT extends BaseIT {
     @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
 
-    @After
+    @Before
     public void tearDown() {
         TestUtils.removeAllEvents(definitionsService, persistenceService);
         TestUtils.removeAllSessions(definitionsService, persistenceService);
@@ -77,6 +79,7 @@ public class ProfileServiceIT extends BaseIT {
 
     @Test
     public void testGetProfileWithScrolling() throws InterruptedException {
+
         final String profileIdOne = "testGetProfileWithScrolling-id-one";
         final String profileIdTwo = "testGetProfileWithScrolling-id-two";
         final String profileIdThree = "testGetProfileWithScrolling-id-three";
