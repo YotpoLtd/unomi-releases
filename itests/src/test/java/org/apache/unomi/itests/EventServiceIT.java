@@ -18,11 +18,14 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 
 
 import org.junit.Test;
+import org.junit.After;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -49,6 +52,22 @@ public class EventServiceIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected ProfileService profileService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected DefinitionsService definitionsService;
+
+    @After
+    public void tearDown() {
+        TestUtils.removeAllEvents(definitionsService, persistenceService);
+        TestUtils.removeAllSessions(definitionsService, persistenceService);
+        TestUtils.removeAllProfiles(definitionsService, persistenceService);
+        persistenceService.refresh();
+    }
 
     @Test
     public void test_EventExistenceWithProfileId() throws InterruptedException{
