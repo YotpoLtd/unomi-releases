@@ -16,3 +16,6 @@ allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
+extensions/web-tracker/javascript/dist/*
+extensions/web-tracker/javascript/snippet.min.*
+**/yarn.lock
