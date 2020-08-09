@@ -44,12 +44,12 @@ import org.junit.runners.Suite.SuiteClasses;
         PatchIT.class,
         ContextServletIT.class,
         SecurityIT.class,
-        GraphQLEventIT.class,
-        GraphQLListIT.class,
-        GraphQLProfileIT.class,
-        GraphQLProfilePropertiesIT.class,
-        GraphQLSegmentIT.class,
-        GraphQLWebSocketIT.class
+//        GraphQLEventIT.class,
+//        GraphQLListIT.class,
+//        GraphQLProfileIT.class,
+//        GraphQLProfilePropertiesIT.class,
+//        GraphQLSegmentIT.class,
+//        GraphQLWebSocketIT.class
 })
 public class AllITs {
 }
