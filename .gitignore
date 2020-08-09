@@ -16,3 +16,5 @@ allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
+extensions/web-tracker
+graphql
