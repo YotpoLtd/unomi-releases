@@ -24,7 +24,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>unomi-manual</artifactId>
+    <artifactId>manual</artifactId>
     <name>Apache Unomi :: Manual</name>
     <packaging>bundle</packaging>
 
