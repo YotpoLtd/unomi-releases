@@ -1943,6 +1943,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
                 return executeInClassLoader(timerName, args);
+            } catch (IllegalStateException e) {
+                // Reactor has stopped - no option to recovery
+                if (e.getMessage().contains("I/O reactor status: STOPPED")) {
+                    logger.error("I/O Reactor stopped - stopping application");
+                    System.exit(-1);
+                }
             } catch (Throwable t) {
                 if (logError) {
                     logger.error("Error while executing in class loader", t);
