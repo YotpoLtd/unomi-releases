@@ -1862,6 +1862,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return routing;
     }
 
+
     @Override
     public void refresh() {
         new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh") {
@@ -2043,6 +2044,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
+
     private String getConfig(Map<String, String> settings, String key,
                              String defaultValue) {
         if (settings != null && settings.get(key) != null) {
@@ -2081,12 +2083,24 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         public T catchingExecuteInClassLoader(boolean logError, Object... args) {
             try {
                 return executeInClassLoader(timerName, args);
-            } catch (Throwable t) {
-                if (logError) {
-                    logger.error("Error while executing in class loader", t);
+            } catch (IllegalStateException e) {
+                // Reactor stopped - recovery is not possible
+                if (e.getMessage().contains("I/O reactor status: STOPPED")) {
+                    logger.error("I/O Reactor stopped - stopping application");
+                    System.exit(-1);
                 }
+                handleError(logError);
+            }
+            catch (Throwable t) {
+                handleError(logError);
             }
             return null;
+        }
+
+        private void handleError(boolean logError) {
+            if (logError) {
+                logger.error("Error while executing in class loader", t);
+            }
         }
     }
 
