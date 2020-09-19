@@ -63,6 +63,7 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -76,6 +77,7 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
@@ -176,6 +178,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
+    public static final String MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED = "monthlyIndex.itemsMonthlyIndexedOverride";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
     public static final String INDEX_DATE_PREFIX = "date-";
@@ -208,6 +211,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Integer defaultQueryLimit = 10;
 
+    private String itemsMonthlyIndexedOverride = "event,session";
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
     private String bulkProcessorBulkSize = "5MB";
@@ -231,7 +235,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
     private boolean alwaysOverwrite = true;
-    private static boolean throwExceptions = false;
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -297,8 +300,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.defaultQueryLimit = defaultQueryLimit;
     }
 
-    public void setItemsMonthlyIndexed(List<String> itemsMonthlyIndexed) {
-        this.itemsMonthlyIndexed = itemsMonthlyIndexed;
+    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
+        this.itemsMonthlyIndexedOverride = itemsMonthlyIndexedOverride;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
@@ -386,10 +389,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.sslTrustAllCertificates = sslTrustAllCertificates;
     }
 
-    public void setThrowExceptions(boolean throwExceptions) {
-        this.throwExceptions = throwExceptions;
-    }
-
     public void setAlwaysOverwrite(boolean alwaysOverwrite) {
         this.alwaysOverwrite = alwaysOverwrite;
     }
@@ -406,7 +405,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
-
+                itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
                 if (System.getProperty("org.apache.unomi.itests.elasticsearch.http.port") != null) {
                     elasticSearchAddressList.clear();
@@ -753,10 +752,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(response.getId());
-                            value.setVersion(response.getVersion());
-                            value.setMetadata(SEQ_NO, response.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, response.getPrimaryTerm());
+                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                             putInCache(itemId, value);
                             return value;
                         } else {
@@ -780,6 +776,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
+    private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm) {
+        item.setItemId(id);
+        item.setVersion(version);
+        item.setMetadata(SEQ_NO, seqNo);
+        item.setMetadata(PRIMARY_TERM, primaryTerm);
+    }
+
     @Override
     public boolean save(final Item item) {
         return save(item, useBatchingForSave, alwaysOverwrite);
@@ -791,8 +794,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean save(final Item item, final boolean useBatching, final boolean alwaysOverwrite) {
-        Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
+    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
+        final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
+
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -823,7 +829,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            client.index(indexRequest, RequestOptions.DEFAULT);
+                            IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
+                            setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
@@ -857,7 +864,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem") {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -875,7 +882,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     if (bulkProcessor == null) {
-                        client.update(updateRequest, RequestOptions.DEFAULT);
+                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -951,7 +959,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript") {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript", this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -971,7 +979,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
-                        client.update(updateRequest, RequestOptions.DEFAULT);
+                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1658,10 +1667,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                value.setItemId(searchHit.getId());
-                                value.setVersion(searchHit.getVersion());
-                                value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                                value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                                 results.add(value);
                             }
 
@@ -1691,10 +1697,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(searchHit.getId());
-                            value.setVersion(searchHit.getVersion());
-                            value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                             results.add(value);
                         }
                     }
@@ -1740,10 +1743,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(searchHit.getId());
-                            value.setVersion(searchHit.getVersion());
-                            value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                             results.add(value);
                         }
                     }
