@@ -83,7 +83,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
         // configurably write to profile properties
-        if ((boolean) pastEventCondition.getParameter("writeCountToProfile")) {
+        if ((boolean) pastEventCondition.getParameter("updateProfileWithProperty")) {
             event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
             return EventService.PROFILE_UPDATED;
         }
