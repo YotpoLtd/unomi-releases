@@ -79,14 +79,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         andCondition.setParameter("subConditions", conditions);
 
-        persistenceService.refresh();
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
-
-        // configurably write to profile properties
-        if ((boolean) pastEventCondition.getParameter("updateProfileWithProperty")) {
-            event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
-            return EventService.PROFILE_UPDATED;
-        }
 
         Map<String, Object> pastEvents = (Map<String, Object>) event.getProfile().getSystemProperties().get("pastEvents");
         if (pastEvents == null) {
@@ -100,6 +93,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         long daysDiff = Duration.between(eventTime,now).toDays();
         if (daysDiff >= 0 && daysDiff <= numberOfDays) {
             count++;
+        }
+
+        // configurably write to profile properties
+        if ((boolean) pastEventCondition.getParameter("updateProfileWithProperty")) {
+            event.getProfile().setProperty((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
+            return EventService.PROFILE_UPDATED;
         }
 
         pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
