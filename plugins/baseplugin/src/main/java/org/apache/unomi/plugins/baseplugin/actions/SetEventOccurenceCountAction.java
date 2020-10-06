@@ -87,14 +87,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
 
-        if (persistenceService.isEventuallyConsistent()) {
-            //Only increase the counter by 1 if the current event is in the now-numberOfDays range
-            LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
-            LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
-            long daysDiff = Duration.between(eventTime,now).toDays();
-            if (daysDiff >= 0 && daysDiff <= numberOfDays) {
-                count++;
-            }
+        //Only increase the counter by 1 if the current event is in the now-numberOfDays range
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
+        long daysDiff = Duration.between(eventTime,now).toDays();
+        if (daysDiff >= 0 && daysDiff <= numberOfDays) {
+            count++;
         }
 
         pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
