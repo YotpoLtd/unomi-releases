@@ -20,6 +20,7 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.elasticsearch.index.query.GeoDistanceQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 
@@ -36,9 +37,10 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
             String distance = condition.getParameter("distance").toString();
 
             if(circleLatitude != null && circleLongitude != null && distance != null) {
-                return QueryBuilders.geoDistanceQuery("location")
+                GeoDistanceQueryBuilder query = QueryBuilders.geoDistanceQuery("properties.location")
                         .point(circleLatitude, circleLongitude)
                         .distance(distance);
+                return query;
             }
         } else if("rectangle".equals(type)) {
             Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
