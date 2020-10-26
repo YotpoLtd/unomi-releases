@@ -32,7 +32,6 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
@@ -220,7 +219,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -260,7 +259,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> search(Query query) {
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {

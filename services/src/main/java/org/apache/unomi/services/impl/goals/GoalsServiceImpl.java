@@ -37,7 +37,6 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -204,7 +203,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Set<Metadata> getGoalMetadatas(Query query) {
-        definitionsService.resolveConditionType(query.getCondition());
+        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
         Set<Metadata> descriptions = new LinkedHashSet<>();
 
         List<Goal> goals = persistenceService.query(query.getCondition(), query.getSortby(), Goal.class, query.getOffset(), query.getLimit()).getList();
@@ -219,8 +218,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Goal getGoal(String goalId) {
         Goal goal = persistenceService.load(goalId, Goal.class);
         if (goal != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+            definitionsService.resolveConditionType(goal.getStartEvent(), this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(goal.getTargetEvent(),  this.getClass().getSimpleName());
         }
         return goal;
     }
@@ -234,8 +233,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     @Override
     public void setGoal(Goal goal) {
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+        definitionsService.resolveConditionType(goal.getStartEvent(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(goal.getTargetEvent(),  this.getClass().getSimpleName());
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -342,7 +341,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
-        definitionsService.resolveConditionType(query.getCondition());
+        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
         Set<Metadata> descriptions = new HashSet<Metadata>();
         for (Campaign definition : persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit()).getList()) {
             descriptions.add(definition.getMetadata());
@@ -351,7 +350,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public PartialList<CampaignDetail> getCampaignDetails(Query query) {
-        definitionsService.resolveConditionType(query.getCondition());
+        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
         PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
         List<CampaignDetail> details = new LinkedList<>();
         for (Campaign definition : campaigns.getList()) {
@@ -407,7 +406,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Campaign getCampaign(String id) {
         Campaign campaign = persistenceService.load(id, Campaign.class);
         if (campaign != null) {
-            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+            definitionsService.resolveConditionType(campaign.getEntryCondition(), this.getClass().getSimpleName());
         }
         return campaign;
     }
@@ -421,7 +420,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void setCampaign(Campaign campaign) {
-        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+        definitionsService.resolveConditionType(campaign.getEntryCondition(), this.getClass().getSimpleName());
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -466,7 +465,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         if (query != null && query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition());
+            definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
             list.add(query.getCondition());
         }
 
@@ -546,7 +545,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if(query.isForceRefresh()){
             persistenceService.refresh();
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
         return persistenceService.query(query.getCondition(), query.getSortby(), CampaignEvent.class, query.getOffset(), query.getLimit());
     }
 
