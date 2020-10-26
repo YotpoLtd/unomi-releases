@@ -57,7 +57,7 @@ public abstract class AbstractServiceImpl {
         if (query.isForceRefresh()) {
             persistenceService.refresh();
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
         PartialList<T> items = persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
         List<Metadata> details = new LinkedList<>();
         for (T definition : items.getList()) {

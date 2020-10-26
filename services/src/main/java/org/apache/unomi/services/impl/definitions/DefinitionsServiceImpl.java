@@ -20,6 +20,7 @@ package org.apache.unomi.services.impl.definitions;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
+import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -58,8 +59,15 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     private long definitionsRefreshInterval = 10000;
 
     private BundleContext bundleContext;
+
+    private ParserHelper parserHelper;
+
     public DefinitionsServiceImpl() {
 
+    }
+
+    public void setParserHelper(ParserHelper parserHelper) {
+        this.parserHelper = parserHelper;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -277,7 +285,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
         for (ConditionType type : all) {
             if (type != null && type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
             }
         }
         return all;
@@ -296,7 +304,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
         for (ConditionType type : directConditionTypes) {
             if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
             }
         }
         conditionTypes.addAll(directConditionTypes);
@@ -316,7 +324,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
         if (type != null && type.getParentCondition() != null) {
-            ParserHelper.resolveConditionType(this, type.getParentCondition());
+            parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
         }
         return type;
     }
@@ -516,7 +524,22 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return ParserHelper.resolveConditionType(this, rootCondition);
+        return parserHelper.resolveConditionType(rootCondition, null);
+    }
+
+    @Override
+    public boolean resolveConditionType(Condition rootCondition, String caller) {
+        return parserHelper.resolveConditionType(rootCondition, caller);
+    }
+
+    @Override
+    public boolean resolveActionType(Action action) {
+        return parserHelper.resolveActionType(action);
+    }
+
+    @Override
+    public boolean resolveActionTypes(List<Action> actions) {
+        return parserHelper.resolveActionTypes(actions);
     }
 
     @Override
