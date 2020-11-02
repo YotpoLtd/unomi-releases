@@ -110,6 +110,8 @@ public interface PersistenceService {
      */
     boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
 
+    boolean saveBulk(List<Item> items);
+
     /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *

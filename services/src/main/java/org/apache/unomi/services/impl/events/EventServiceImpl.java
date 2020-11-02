@@ -20,10 +20,7 @@ package org.apache.unomi.services.impl.events;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
@@ -40,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
@@ -141,17 +139,30 @@ public class EventServiceImpl implements EventService {
     }
 
     public int send(Event event) {
-        return send(event, 0);
+        return send(event, 0, false);
     }
 
-    private int send(Event event, int depth) {
+    public int sendBulk(List<Event> events) {
+        List<Item> persistentEvents = events.stream().filter(event -> event.isPersistent()).collect(Collectors.toList());
+        boolean success = persistenceService.saveBulk(persistentEvents);
+        if (success) {
+            for (Event event: events) {
+                send(event, 0, true);
+            }
+            return PROFILE_UPDATED;
+        }
+        return NO_CHANGE;
+
+    }
+
+    private int send(Event event, int depth, boolean disablePersistent) {
         if (depth > MAX_RECURSION_DEPTH) {
             logger.warn("Max recursion depth reached");
             return NO_CHANGE;
         }
 
         boolean saveSucceeded = true;
-        if (event.isPersistent()) {
+        if (event.isPersistent() && !disablePersistent) {
             saveSucceeded = persistenceService.save(event, null, true);
         }
 
@@ -179,7 +190,7 @@ public class EventServiceImpl implements EventService {
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
-                    changes |= send(profileUpdated, depth + 1);
+                    changes |= send(profileUpdated, depth + 1, disablePersistent);
                     if (session != null && session.getProfileId() != null) {
                         changes |= SESSION_UPDATED;
                         session.setProfile(event.getProfile());

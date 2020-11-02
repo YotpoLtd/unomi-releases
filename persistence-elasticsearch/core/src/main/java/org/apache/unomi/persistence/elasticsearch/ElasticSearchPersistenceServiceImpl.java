@@ -828,6 +828,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
+//                            indexRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
@@ -849,6 +850,30 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } else {
             return result;
         }
+    }
+
+    @Override
+    public boolean saveBulk(List<Item> items) {
+        try {
+            BulkRequest bulkRequest = new BulkRequest();
+            for (Item item : items) {
+                String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
+                String itemType = item.getItemType();
+                String itemId = item.getItemId();
+                putInCache(itemId, item);
+                String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
+                IndexRequest indexRequest = new IndexRequest(index);
+                indexRequest.id(itemId);
+                indexRequest.source(source, XContentType.JSON);
+                bulkRequest.add(indexRequest);
+            }
+
+            bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
+            BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+            return !bulkResponse.hasFailures();
+        }
+        catch (Exception e) {}
+        return false;
     }
 
     @Override
