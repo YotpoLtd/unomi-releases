@@ -23,7 +23,6 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -119,6 +118,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @SuppressWarnings("rawtypes")
@@ -859,6 +859,43 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source) {
         return update(item, dateHint, clazz, source, alwaysOverwrite);
+    }
+
+    @Override
+    public List<String> updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected List<String> execute(Object... args) throws Exception {
+                BulkRequest bulkRequest = new BulkRequest();
+                items.forEach((item, source) -> {
+                    String itemType = Item.getItemType(clazz);
+                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+                    updateRequest.doc(source);
+
+                    if (!alwaysOverwrite) {
+                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
+                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
+
+                        if (seqNo != null && primaryTerm != null) {
+                            updateRequest.setIfSeqNo(seqNo);
+                            updateRequest.setIfPrimaryTerm(primaryTerm);
+                        }
+                    }
+
+                    bulkRequest.add(updateRequest);
+                });
+
+                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                List<String> failedIds = new ArrayList<>();
+                if (bulkResponse.hasFailures()){
+                    Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
+                    iterator.forEachRemaining(bulkItemResponse -> {
+                        failedIds.add(bulkItemResponse.getId());
+                    });
+                }
+                return failedIds;
+            }
+        }.catchingExecuteInClassLoader(true);
+        return result;
     }
 
     @Override

@@ -134,6 +134,8 @@ public interface PersistenceService {
      */
     boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
 
+    List<String> updateBatch(Map<Item, Map> items, Date dateHint, Class clazz);
+
     /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
