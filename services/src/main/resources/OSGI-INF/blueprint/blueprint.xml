@@ -37,6 +37,7 @@
             <cm:property name="segment.max.retries.update.profile.segment" value="5"/>
             <cm:property name="segment.retry.update.segment.seconds.delay" value="1"/>
             <cm:property name="segment.recalculate.period" value="1"/>
+            <cm:property name="segment.batch.update" value="false"/>
             <cm:property name="rules.refresh.interval" value="1000"/>
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
         </cm:default-properties>

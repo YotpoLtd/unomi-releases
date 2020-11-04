@@ -262,7 +262,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         persistenceService.save(segment);
 
-        if (batchSegmentProfileUpdate)
+        if (batchSegmentProfileUpdate == false)
             updateExistingProfilesForSegment(segment);
         else
             batchUpdateExistingProfilesForSegment(segment);
