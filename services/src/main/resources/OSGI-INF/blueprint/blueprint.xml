@@ -272,8 +272,6 @@
     <reference-list id="conditionHooks"
                     interface="org.apache.unomi.api.conditions.ConditionHook"
                     availability="optional">
-        <reference-listener
-                bind-method="bind" unbind-method="unbind" ref="parserHelper"/>
     </reference-list>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

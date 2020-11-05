@@ -26,6 +26,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.conditions.ConditionHook;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.PrototypeServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,6 @@ public class ParserHelper {
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
-    private List<ConditionHook> conditionHooks = new LinkedList<>();
     private DefinitionsService definitionsService = null;
     private BundleContext bundleContext;
 
@@ -49,17 +49,6 @@ public class ParserHelper {
         this.bundleContext = bundleContext;
     }
 
-    public void bind(ServiceReference<ConditionHook> serviceReference) {
-        ConditionHook conditionHook = bundleContext.getService(serviceReference);
-        conditionHooks.add(conditionHook);
-    }
-
-    public void unbind(ServiceReference<ConditionHook> serviceReference) {
-        if (serviceReference != null) {
-            ConditionHook conditionHook = bundleContext.getService(serviceReference);
-            conditionHooks.remove(conditionHook);
-        }
-    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -72,6 +61,8 @@ public class ParserHelper {
         final List<String> result = new ArrayList<String>();
         Map initialContext = new HashMap<>();
         initialContext.put("caller", caller);
+
+        List<ConditionHook> conditionHooks = getConditionHooks();
 
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
@@ -89,7 +80,7 @@ public class ParserHelper {
                         }
                     }
                 }
-                hookCondition(condition, context);
+                hookCondition(conditionHooks, condition, context);
             }
         }, initialContext);
         return result.isEmpty();
@@ -160,10 +151,27 @@ public class ParserHelper {
         }
     }
 
-    private void hookCondition(Condition condition, Map<String, Object> context) {
+    private void hookCondition(List<ConditionHook> conditionHooks, Condition condition, Map<String, Object> context) {
         for (ConditionHook conditionHook: conditionHooks) {
             conditionHook.executeHook(condition, context);
         }
+    }
+
+    private List<ConditionHook> getConditionHooks() {
+        List<ConditionHook> conditionHooks = new LinkedList<>();
+        try {
+            ServiceReference<ConditionHook>[] srs = (ServiceReference<ConditionHook>[]) bundleContext
+                    .getAllServiceReferences(ConditionHook.class.getName(), null);
+            if (srs != null) {
+                for (ServiceReference<ConditionHook> sr : srs) {
+                    ConditionHook conditionHook = bundleContext.getService(sr);
+                    conditionHooks.add(conditionHook);
+                }
+            }
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+        return conditionHooks;
     }
 
     interface ConditionVisitor {
