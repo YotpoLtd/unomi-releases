@@ -110,7 +110,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 reloadTypes(false);
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, 1000 * 100, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for condition type loading each 10s");
     }
 
