@@ -63,7 +63,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private List<Segment> allSegments;
     private List<Scoring> allScoring;
     private int segmentUpdateBatchSize = 1000;
-    private long segmentRefreshInterval = 1000 * 15;
+    private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
 
     private int maximumIdsQueryCount = 5000;
@@ -1091,7 +1091,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, 1000 * 15, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {

@@ -58,7 +58,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
-    private Integer rulesRefreshInterval = 1000 * 15;
+    private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
     private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
@@ -400,7 +400,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,1000 * 15, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
 
         TimerTask statisticsTask = new TimerTask() {
             @Override

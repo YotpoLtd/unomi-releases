@@ -76,16 +76,16 @@ public class ParserHelper {
         return result.isEmpty();
     }
 
-//    public  List<String> getConditionTypeIds(Condition rootCondition) {
-//        final List<String> result = new ArrayList<String>();
-//        visitConditions(rootCondition, new ConditionVisitor() {
-//            @Override
-//            public void visit(Condition condition) {
-//                result.add(condition.getConditionTypeId());
-//            }
-//        }, new HashMap());
-//        return result;
-//    }
+    public  List<String> getConditionTypeIds(Condition rootCondition) {
+        final List<String> result = new ArrayList<String>();
+        visitConditions(rootCondition, new ConditionVisitor() {
+            @Override
+            public void visit(Condition condition) {
+                result.add(condition.getConditionTypeId());
+            }
+        });
+        return result;
+    }
 
     private void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
         visitor.visit(rootCondition);
@@ -150,11 +150,11 @@ public class ParserHelper {
     private List<ConditionHook> getConditionHooks() {
         List<ConditionHook> conditionHooks = new LinkedList<>();
         try {
-            ServiceReference<ConditionHook>[] srs = (ServiceReference<ConditionHook>[]) bundleContext
+            ServiceReference<ConditionHook>[] serviceReferences = (ServiceReference<ConditionHook>[]) bundleContext
                     .getAllServiceReferences(ConditionHook.class.getName(), null);
-            if (srs != null) {
-                for (ServiceReference<ConditionHook> sr : srs) {
-                    ConditionHook conditionHook = bundleContext.getService(sr);
+            if (serviceReferences != null) {
+                for (ServiceReference<ConditionHook> serviceReference : serviceReferences) {
+                    ConditionHook conditionHook = bundleContext.getService(serviceReference);
                     conditionHooks.add(conditionHook);
                 }
             }
