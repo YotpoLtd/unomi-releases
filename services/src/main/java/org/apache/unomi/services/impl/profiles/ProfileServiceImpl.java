@@ -376,7 +376,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (query.getScrollIdentifier() != null) {
             return persistenceService.continueScrollQuery(clazz, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName())) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
@@ -763,7 +763,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(condition);
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -788,7 +788,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {
-        definitionsService.resolveConditionType(update.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(update.getCondition());
         List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
 
         for (Profile profile : profiles) {

@@ -207,15 +207,6 @@ public interface DefinitionsService {
     boolean resolveConditionType(Condition rootCondition);
 
     /**
-     * Resolves (if possible) the {@link ConditionType}s for the specified condition and its sub-conditions (if any) from the type identifiers existing on the specified condition
-     *
-     * @param rootCondition the condition for which we want to resolve the condition types from the existing condition type identifiers
-     * @param caller the source class that initiate the call
-     * * @return {@code true}
-     */
-    boolean resolveConditionType(Condition rootCondition, String caller);
-
-    /**
      * Resolves (if possible) the {@link ActionType} for the specified action
      *
      * @param action the action for which we want to resolve type

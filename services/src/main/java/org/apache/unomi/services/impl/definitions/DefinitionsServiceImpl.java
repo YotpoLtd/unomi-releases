@@ -110,7 +110,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 reloadTypes(false);
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, 1000 * 100, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for condition type loading each 10s");
     }
 
@@ -285,7 +285,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
         for (ConditionType type : all) {
             if (type != null && type.getParentCondition() != null) {
-                parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
+                parserHelper.resolveConditionType(this, type.getParentCondition());
             }
         }
         return all;
@@ -304,7 +304,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
         for (ConditionType type : directConditionTypes) {
             if (type.getParentCondition() != null) {
-                parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
+                parserHelper.resolveConditionType(this, type.getParentCondition());
             }
         }
         conditionTypes.addAll(directConditionTypes);
@@ -324,7 +324,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
         if (type != null && type.getParentCondition() != null) {
-            parserHelper.resolveConditionType(type.getParentCondition(), this.getClass().getSimpleName());
+            parserHelper.resolveConditionType(this, type.getParentCondition());
         }
         return type;
     }
@@ -524,22 +524,17 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return parserHelper.resolveConditionType(rootCondition, null);
-    }
-
-    @Override
-    public boolean resolveConditionType(Condition rootCondition, String caller) {
-        return parserHelper.resolveConditionType(rootCondition, caller);
+        return parserHelper.resolveConditionType(this, rootCondition);
     }
 
     @Override
     public boolean resolveActionType(Action action) {
-        return parserHelper.resolveActionType(action);
+        return parserHelper.resolveActionType(this, action);
     }
 
     @Override
     public boolean resolveActionTypes(List<Action> actions) {
-        return parserHelper.resolveActionTypes(actions);
+        return parserHelper.resolveActionTypes(this, actions);
     }
 
     @Override

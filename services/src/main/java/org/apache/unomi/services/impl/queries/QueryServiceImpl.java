@@ -73,7 +73,7 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition) {
         if (condition.getConditionType() == null) {
-            definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(condition);
         }
         return persistenceService.getSingleValuesMetrics(condition, slashConcatenatedMetrics.split("/"), property, type);
     }
@@ -81,7 +81,7 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public long getQueryCount(String itemType, Condition condition) {
         if (condition.getConditionType() == null) {
-            definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(condition);
         }
         return persistenceService.queryCount(condition, itemType);
     }
@@ -90,7 +90,7 @@ public class QueryServiceImpl implements QueryService {
         if (query != null) {
             // resolve condition
             if (query.getCondition() != null) {
-                definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+                definitionsService.resolveConditionType(query.getCondition());
             }
 
             // resolve aggregate

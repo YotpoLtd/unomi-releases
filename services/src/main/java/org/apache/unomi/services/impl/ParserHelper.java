@@ -26,7 +26,6 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.conditions.ConditionHook;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.PrototypeServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,31 +41,22 @@ public class ParserHelper {
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
-    private DefinitionsService definitionsService = null;
     private BundleContext bundleContext;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    public boolean resolveConditionType(Condition rootCondition, String caller) {
+    public boolean resolveConditionType(DefinitionsService definitionsService, Condition rootCondition) {
         if (rootCondition == null) {
             return false;
         }
         final List<String> result = new ArrayList<String>();
-        Map initialContext = new HashMap<>();
-        initialContext.put("caller", caller);
-
         List<ConditionHook> conditionHooks = getConditionHooks();
 
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition, Map<String, Object> context) {
+            public void visit(Condition condition) {
                 if (condition.getConditionType() == null) {
                     ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
                     if (conditionType != null) {
@@ -80,52 +70,52 @@ public class ParserHelper {
                         }
                     }
                 }
-                hookCondition(conditionHooks, condition, context);
+                hookCondition(conditionHooks, condition);
             }
-        }, initialContext);
+        });
         return result.isEmpty();
     }
 
-    public  List<String> getConditionTypeIds(Condition rootCondition) {
-        final List<String> result = new ArrayList<String>();
-        visitConditions(rootCondition, new ConditionVisitor() {
-            @Override
-            public void visit(Condition condition, Map<String, Object> context) {
-                result.add(condition.getConditionTypeId());
-            }
-        }, new HashMap());
-        return result;
-    }
+//    public  List<String> getConditionTypeIds(Condition rootCondition) {
+//        final List<String> result = new ArrayList<String>();
+//        visitConditions(rootCondition, new ConditionVisitor() {
+//            @Override
+//            public void visit(Condition condition) {
+//                result.add(condition.getConditionTypeId());
+//            }
+//        }, new HashMap());
+//        return result;
+//    }
 
-    private void visitConditions(Condition rootCondition, ConditionVisitor visitor, Map<String, Object> context) {
-        visitor.visit(rootCondition, context);
+    private void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+        visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
             if (parameterValue instanceof Condition) {
                 Condition parameterValueCondition = (Condition) parameterValue;
-                visitConditions(parameterValueCondition, visitor, context);
+                visitConditions(parameterValueCondition, visitor);
             } else if (parameterValue instanceof Collection) {
                 @SuppressWarnings("unchecked")
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {
                         Condition valueCondition = (Condition) value;
-                        visitConditions(valueCondition, visitor, context);
+                        visitConditions(valueCondition, visitor);
                     }
                 }
             }
         }
     }
 
-    public boolean resolveActionTypes(List<Action> actions) {
+    public boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
         boolean result = true;
         for (Action action : actions) {
-            result &= resolveActionType(action);
+            result &= resolveActionType(definitionsService, action);
         }
         return result;
     }
 
-    public boolean resolveActionType(Action action) {
+    public boolean resolveActionType(DefinitionsService definitionsService, Action action) {
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {
@@ -151,9 +141,9 @@ public class ParserHelper {
         }
     }
 
-    private void hookCondition(List<ConditionHook> conditionHooks, Condition condition, Map<String, Object> context) {
+    private void hookCondition(List<ConditionHook> conditionHooks, Condition condition) {
         for (ConditionHook conditionHook: conditionHooks) {
-            conditionHook.executeHook(condition, context);
+            conditionHook.executeHook(condition);
         }
     }
 
@@ -175,6 +165,6 @@ public class ParserHelper {
     }
 
     interface ConditionVisitor {
-        void visit(Condition condition, Map<String, Object> context);
+        void visit(Condition condition);
     }
 }

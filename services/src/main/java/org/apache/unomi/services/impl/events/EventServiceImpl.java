@@ -219,7 +219,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(condition);
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -259,7 +259,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> search(Query query) {
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName())) {
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {

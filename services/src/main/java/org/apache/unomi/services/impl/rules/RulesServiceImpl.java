@@ -58,7 +58,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
-    private Integer rulesRefreshInterval = 1000;
+    private Integer rulesRefreshInterval = 1000 * 15;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
     private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
@@ -247,7 +247,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> getAllRules() {
         List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
-            definitionsService.resolveConditionType(rule.getCondition(), this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(rule.getCondition());
             definitionsService.resolveActionTypes(rule.getActions());
         }
         return allItems;
@@ -315,7 +315,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if(query.isForceRefresh()){
             persistenceService.refresh();
         }
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         List<Metadata> descriptions = new LinkedList<>();
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         for (Rule definition : rules.getList()) {
@@ -328,7 +328,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (query.isForceRefresh()) {
             persistenceService.refresh();
         }
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         List<Rule> details = new LinkedList<>();
         details.addAll(rules.getList());
@@ -339,7 +339,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             if (rule.getCondition() != null) {
-                definitionsService.resolveConditionType(rule.getCondition(), this.getClass().getSimpleName());
+                definitionsService.resolveConditionType(rule.getCondition());
             }
             if (rule.getActions() != null) {
                 definitionsService.resolveActionTypes(rule.getActions());
@@ -355,7 +355,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                definitionsService.resolveConditionType(condition, this.getClass().getSimpleName());
+                definitionsService.resolveConditionType(condition);
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -372,7 +372,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if(trackedCondition != null){
                 Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
-                    definitionsService.resolveConditionType(sourceEventPropertyCondition, this.getClass().getSimpleName());
+                    definitionsService.resolveConditionType(sourceEventPropertyCondition);
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
                         trackedConditions.add(trackedCondition);
                     }
@@ -400,7 +400,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,1000 * 15, TimeUnit.MILLISECONDS);
 
         TimerTask statisticsTask = new TimerTask() {
             @Override

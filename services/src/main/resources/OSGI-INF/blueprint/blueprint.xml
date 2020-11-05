@@ -257,7 +257,6 @@
     </service>
 
     <bean id="parserHelper" class="org.apache.unomi.services.impl.ParserHelper">
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 

@@ -203,7 +203,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Set<Metadata> getGoalMetadatas(Query query) {
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new LinkedHashSet<>();
 
         List<Goal> goals = persistenceService.query(query.getCondition(), query.getSortby(), Goal.class, query.getOffset(), query.getLimit()).getList();
@@ -218,8 +218,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Goal getGoal(String goalId) {
         Goal goal = persistenceService.load(goalId, Goal.class);
         if (goal != null) {
-            definitionsService.resolveConditionType(goal.getStartEvent(), this.getClass().getSimpleName());
-            definitionsService.resolveConditionType(goal.getTargetEvent(),  this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(goal.getStartEvent());
+            definitionsService.resolveConditionType(goal.getTargetEvent());
         }
         return goal;
     }
@@ -233,8 +233,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     @Override
     public void setGoal(Goal goal) {
-        definitionsService.resolveConditionType(goal.getStartEvent(), this.getClass().getSimpleName());
-        definitionsService.resolveConditionType(goal.getTargetEvent(),  this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(goal.getStartEvent());
+        definitionsService.resolveConditionType(goal.getTargetEvent());
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -341,7 +341,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         Set<Metadata> descriptions = new HashSet<Metadata>();
         for (Campaign definition : persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit()).getList()) {
             descriptions.add(definition.getMetadata());
@@ -350,7 +350,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public PartialList<CampaignDetail> getCampaignDetails(Query query) {
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
         List<CampaignDetail> details = new LinkedList<>();
         for (Campaign definition : campaigns.getList()) {
@@ -406,7 +406,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Campaign getCampaign(String id) {
         Campaign campaign = persistenceService.load(id, Campaign.class);
         if (campaign != null) {
-            definitionsService.resolveConditionType(campaign.getEntryCondition(), this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(campaign.getEntryCondition());
         }
         return campaign;
     }
@@ -420,7 +420,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void setCampaign(Campaign campaign) {
-        definitionsService.resolveConditionType(campaign.getEntryCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(campaign.getEntryCondition());
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -465,7 +465,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         if (query != null && query.getCondition() != null) {
-            definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+            definitionsService.resolveConditionType(query.getCondition());
             list.add(query.getCondition());
         }
 
@@ -545,7 +545,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         if(query.isForceRefresh()){
             persistenceService.refresh();
         }
-        definitionsService.resolveConditionType(query.getCondition(), this.getClass().getSimpleName());
+        definitionsService.resolveConditionType(query.getCondition());
         return persistenceService.query(query.getCondition(), query.getSortby(), CampaignEvent.class, query.getOffset(), query.getLimit());
     }
 
