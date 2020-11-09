@@ -268,8 +268,8 @@
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
     </reference-list>
 
-    <reference-list id="conditionHooks"
-                    interface="org.apache.unomi.api.conditions.ConditionHook"
+    <reference-list id="conditionHookFactories"
+                    interface="org.apache.unomi.api.conditions.ConditionHookFactory"
                     availability="optional">
     </reference-list>
 

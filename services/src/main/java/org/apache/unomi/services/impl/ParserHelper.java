@@ -22,6 +22,7 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionHookFactory;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.conditions.ConditionHook;
@@ -150,12 +151,12 @@ public class ParserHelper {
     private List<ConditionHook> getConditionHooks() {
         List<ConditionHook> conditionHooks = new LinkedList<>();
         try {
-            ServiceReference<ConditionHook>[] serviceReferences = (ServiceReference<ConditionHook>[]) bundleContext
-                    .getAllServiceReferences(ConditionHook.class.getName(), null);
+            ServiceReference<ConditionHookFactory>[] serviceReferences = (ServiceReference<ConditionHookFactory>[]) bundleContext
+                    .getAllServiceReferences(ConditionHookFactory.class.getName(), null);
             if (serviceReferences != null) {
-                for (ServiceReference<ConditionHook> serviceReference : serviceReferences) {
-                    ConditionHook conditionHook = bundleContext.getService(serviceReference);
-                    conditionHooks.add(conditionHook);
+                for (ServiceReference<ConditionHookFactory> serviceReference : serviceReferences) {
+                    ConditionHookFactory conditionHookFactory = bundleContext.getService(serviceReference);
+                    conditionHooks.add(conditionHookFactory.createConditionHook());
                 }
             }
         } catch(Exception e) {
