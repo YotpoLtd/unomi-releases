@@ -865,6 +865,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public List<String> updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
         List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected List<String> execute(Object... args) throws Exception {
+                long batchRequestStartTime = System.currentTimeMillis();
                 BulkRequest bulkRequest = new BulkRequest();
                 items.forEach((item, source) -> {
                     String itemType = Item.getItemType(clazz);
@@ -885,6 +886,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 });
 
                 BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                logger.info("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+
                 List<String> failedIds = new ArrayList<>();
                 if (bulkResponse.hasFailures()){
                     Iterator<BulkItemResponse> iterator = bulkResponse.iterator();

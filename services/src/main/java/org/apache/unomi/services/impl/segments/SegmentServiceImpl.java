@@ -73,9 +73,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int aggregateQueryBucketSize = 5000;
     private int maxRetriesForUpdateProfileSegment = 5;
     private long secondsDelayForRetryUpdateProfileSegment = 1;
-
     private boolean batchSegmentProfileUpdate = false;
-
+    private boolean sendProfileUpdateEventForSegmentUpdate = true;
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
 
@@ -130,6 +129,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public void setBatchSegmentProfileUpdate(boolean batchSegmentProfileUpdate) {
         this.batchSegmentProfileUpdate = batchSegmentProfileUpdate;
     }
+
+    public void setSendProfileUpdateEventForSegmentUpdate(boolean sendProfileUpdateEventForSegmentUpdate){
+        this.sendProfileUpdateEventForSegmentUpdate = sendProfileUpdateEventForSegmentUpdate;
+    }
+
 
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
@@ -261,11 +265,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         persistenceService.save(segment);
-
-        if (batchSegmentProfileUpdate == false)
-            updateExistingProfilesForSegment(segment);
-        else
-            batchUpdateExistingProfilesForSegment(segment);
+        updateExistingProfilesForSegment(segment);
     }
 
     private boolean checkSegmentDeletionImpact(Condition condition, String segmentToDeleteId) {
@@ -908,71 +908,16 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private void batchUpdateExistingProfilesForSegment(Segment segment) {
-        long updateProfilesForSegmentStartTime = System.currentTimeMillis();
-        Condition segmentCondition = new Condition();
-
-        long updatedProfileCount = 0;
-
-        segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        segmentCondition.setParameter("propertyName", "segments");
-        segmentCondition.setParameter("comparisonOperator", "equals");
-        segmentCondition.setParameter("propertyValue", segment.getItemId());
-
-        if (segment.getMetadata().isEnabled()) {
-
-            ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
-            ConditionType notConditionType = definitionsService.getConditionType("notCondition");
-
-            Condition profilesToAddCondition = new Condition(booleanConditionType);
-            profilesToAddCondition.setParameter("operator", "and");
-            List<Condition> profilesToAddSubConditions = new ArrayList<>();
-            profilesToAddSubConditions.add(segment.getCondition());
-            Condition notOldSegmentCondition = new Condition(notConditionType);
-            notOldSegmentCondition.setParameter("subCondition", segmentCondition);
-            profilesToAddSubConditions.add(notOldSegmentCondition);
-            profilesToAddCondition.setParameter("subConditions", profilesToAddSubConditions);
-
-            Condition profilesToRemoveCondition = new Condition(booleanConditionType);
-            profilesToRemoveCondition.setParameter("operator", "and");
-            List<Condition> profilesToRemoveSubConditions = new ArrayList<>();
-            profilesToRemoveSubConditions.add(segmentCondition);
-            Condition notNewSegmentCondition = new Condition(notConditionType);
-            notNewSegmentCondition.setParameter("subCondition", segment.getCondition());
-            profilesToRemoveSubConditions.add(notNewSegmentCondition);
-            profilesToRemoveCondition.setParameter("subConditions", profilesToRemoveSubConditions);
-
-            PartialList<Profile> profilesToRemove = persistenceService.query(profilesToRemoveCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
-            PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
-
-            //adding segments from profiles
-            updatedProfileCount = batchUpdateSegment(profilesToAdd, segment.getItemId(), updatedProfileCount,
-                    failedProfileId -> retryAddSegmentFunction(segment.getItemId(), failedProfileId),
-                    profileToAdd -> propertiesMapForAddingSegment(segment.getItemId(), profileToAdd));
-            //removing segments from profiles
-            updatedProfileCount = batchUpdateSegment(profilesToRemove, segment.getItemId(), updatedProfileCount,
-                    failedProfileId -> retryRemoveSegmentFunction(segment.getItemId(), failedProfileId),
-                    profileToRemove -> propertiesMapForRemovingSegment(profileToRemove, segment.getItemId()));
-
-        } else {
-            PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
-            updatedProfileCount = batchUpdateSegment(profilesToRemove, segment.getItemId(), updatedProfileCount,
-                    failedProfileId -> retryRemoveSegmentFunction(segment.getItemId(), failedProfileId),
-                    profileToRemove1 -> propertiesMapForRemovingSegment(profileToRemove1, segment.getItemId()));
-        }
-        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
-    }
-
     private void updateExistingProfilesForSegment(Segment segment) {
         long updateProfilesForSegmentStartTime = System.currentTimeMillis();
-        Condition segmentCondition = new Condition();
-
         long updatedProfileCount = 0;
+        final String segmentId = segment.getItemId();
 
+        Condition segmentCondition = new Condition();
         segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         segmentCondition.setParameter("propertyName", "segments");
         segmentCondition.setParameter("comparisonOperator", "equals");
-        segmentCondition.setParameter("propertyValue", segment.getItemId());
+        segmentCondition.setParameter("propertyValue", segmentId);
 
         if (segment.getMetadata().isEnabled()) {
 
@@ -1000,88 +945,93 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             PartialList<Profile> profilesToRemove = persistenceService.query(profilesToRemoveCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
             PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
-            while (profilesToAdd.getList().size() > 0) {
-                long profilesToAddStartTime = System.currentTimeMillis();
-                for (Profile profileToAdd : profilesToAdd.getList()) {
-                    profileToAdd.getSegments().add(segment.getItemId());
-                    Map<String,Object> sourceMap = new HashMap<>();
-                    sourceMap.put("segments", profileToAdd.getSegments());
-                    profileToAdd.setSystemProperty("lastUpdated", new Date());
-                    sourceMap.put("systemProperties", profileToAdd.getSystemProperties());
-                    persistenceService.update(profileToAdd, null, Profile.class, sourceMap);
-                    Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
-                    profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
-                    updatedProfileCount++;
-                }
-                logger.info("{} profiles added to segment in {}ms", profilesToAdd.size(), System.currentTimeMillis() - profilesToAddStartTime);
-                profilesToAdd = persistenceService.continueScrollQuery(Profile.class, profilesToAdd.getScrollIdentifier(), profilesToAdd.getScrollTimeValidity());
-                if (profilesToAdd == null || profilesToAdd.getList().size() == 0) {
-                    break;
-                }
+            if (batchSegmentProfileUpdate)
+            {
+                //adding segments from profiles
+                updatedProfileCount = batchUpdateSegment(profilesToAdd, segmentId, updatedProfileCount,
+                        failedProfileId -> retryAddSegmentFunction(segmentId, failedProfileId),
+                        profileToAdd -> propertiesMapForAddingSegment(segmentId, profileToAdd));
+                //removing segments from profiles
+                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount,
+                        failedProfileId -> retryRemoveSegmentFunction(segmentId, failedProfileId),
+                        profileToRemove -> propertiesMapForRemovingSegment(profileToRemove, segmentId));
             }
-            while (profilesToRemove.getList().size() > 0) {
-                long profilesToRemoveStartTime = System.currentTimeMillis();
-                for (Profile profileToRemove : profilesToRemove.getList()) {
-                    profileToRemove.getSegments().remove(segment.getItemId());
-                    Map<String,Object> sourceMap = new HashMap<>();
-                    sourceMap.put("segments", profileToRemove.getSegments());
-                    profileToRemove.setSystemProperty("lastUpdated", new Date());
-                    sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
-                    persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
-                    Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
-                    profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
-                    updatedProfileCount++;
+            else{
+                while (profilesToAdd.getList().size() > 0) {
+                    long profilesToAddStartTime = System.currentTimeMillis();
+                    for (Profile profileToAdd : profilesToAdd.getList()) {
+                        Map<String,Object> sourceMap = propertiesMapForAddingSegment(segmentId, profileToAdd);
+                        persistenceService.update(profileToAdd, null, Profile.class, sourceMap);
+                        sendProfileUpdateEvent(profileToAdd);
+                        updatedProfileCount++;
+                    }
+                    logger.info("{} profiles added to segment in {}ms", profilesToAdd.size(), System.currentTimeMillis() - profilesToAddStartTime);
+                    profilesToAdd = persistenceService.continueScrollQuery(Profile.class, profilesToAdd.getScrollIdentifier(), profilesToAdd.getScrollTimeValidity());
+                    if (profilesToAdd == null || profilesToAdd.getList().size() == 0) {
+                        break;
+                    }
                 }
-                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime );
-                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
-                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
-                    break;
-                }
+
+                updatedProfileCount = updateRemovedSegments(updatedProfileCount, segmentId, profilesToRemove);
             }
+
 
         } else {
             PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
-            while (profilesToRemove.getList().size() > 0) {
-                long profilesToRemoveStartTime = System.currentTimeMillis();
-                for (Profile profileToRemove : profilesToRemove.getList()) {
-                    profileToRemove.getSegments().remove(segment.getItemId());
-                    Map<String,Object> sourceMap = new HashMap<>();
-                    sourceMap.put("segments", profileToRemove.getSegments());
-                    profileToRemove.setSystemProperty("lastUpdated", new Date());
-                    sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
-                    persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
-                    Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
-                    profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
-                    updatedProfileCount++;
-                }
-                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
-                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
-                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
-                    break;
-                }
+            if (batchSegmentProfileUpdate) {
+                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount,
+                        failedProfileId -> retryRemoveSegmentFunction(segmentId, failedProfileId),
+                        profileToRemove1 -> propertiesMapForRemovingSegment(profileToRemove1, segmentId));
+            }
+            else{
+                updatedProfileCount = updateRemovedSegments(updatedProfileCount, segmentId, profilesToRemove);
             }
         }
         logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
-    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, long updatedProfileCount, Consumer<String> retryRemoveSegmentMethod, Function<Profile, Map<String, Object>> propertiesForUpdateFunction) {
+    private long updateRemovedSegments(long updatedProfileCount, String segmentId, PartialList<Profile> profilesToRemove) {
+        while (profilesToRemove.getList().size() > 0) {
+            long profilesToRemoveStartTime = System.currentTimeMillis();
+            for (Profile profileToRemove : profilesToRemove.getList()) {
+                Map<String,Object> sourceMap = propertiesMapForRemovingSegment(profileToRemove, segmentId);
+                persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
+                sendProfileUpdateEvent(profileToRemove);
+                updatedProfileCount++;
+            }
+            logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
+            profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
+            if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
+                break;
+            }
+        }
+        return updatedProfileCount;
+    }
+
+    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, long updatedProfileCount, Consumer<String> retryUpdateSegmentMethod, Function<Profile, Map<String, Object>> setPropertiesForUpdateFunction) {
         while (profilesToUpdate.getList().size() > 0) {
             long profilesToRemoveStartTime = System.currentTimeMillis();
 
             //batch update
             Map<Item, Map> batchRequestMap = new HashMap<>();
             for (Profile profileToRemove : profilesToUpdate.getList()) {
-                Map<String, Object> updateFields = propertiesForUpdateFunction.apply(profileToRemove);
+                Map<String, Object> updateFields = setPropertiesForUpdateFunction.apply(profileToRemove);
                 batchRequestMap.put(profileToRemove, updateFields);
             }
-            List<String> failedIds =  persistenceService.updateBatch(batchRequestMap, null, Profile.class);
-            retryFailedSegmentUpdates(failedIds, segmentId, retryRemoveSegmentMethod);
-            updatedProfileCount = SendProfileUpdatesEvents(updatedProfileCount, profilesToUpdate);
 
-            logger.info("{} profiles removed from segment in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
+            List<String> failedIds =  persistenceService.updateBatch(batchRequestMap, null, Profile.class);
+            retryFailedSegmentUpdates(failedIds, segmentId, retryUpdateSegmentMethod);
+
+            if (sendProfileUpdateEventForSegmentUpdate) {
+                long sendProfileUpdatesEventsStartTime = System.currentTimeMillis();
+                for (Profile profileToAdd : profilesToUpdate.getList()) {
+                    sendProfileUpdateEvent(profileToAdd);
+                }
+                logger.debug("{} sendProfileUpdatesEvents  in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - sendProfileUpdatesEventsStartTime);
+            }
+
+            logger.info("{} profiles updated of segment in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
+            updatedProfileCount = updatedProfileCount + profilesToUpdate.size();
             profilesToUpdate = persistenceService.continueScrollQuery(Profile.class, profilesToUpdate.getScrollIdentifier(), profilesToUpdate.getScrollTimeValidity());
             if (profilesToUpdate == null || profilesToUpdate.getList().size() == 0) {
                 break;
@@ -1091,24 +1041,23 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return updatedProfileCount;
     }
 
-    private long SendProfileUpdatesEvents(long updatedProfileCount, PartialList<Profile> profilesToAdd) {
-        for (Profile profileToAdd : profilesToAdd.getList()) {
+    private void sendProfileUpdateEvent(Profile profileToAdd) {
+        if (sendProfileUpdateEventForSegmentUpdate){
             Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
             profileUpdated.setPersistent(false);
             eventService.send(profileUpdated);
-            updatedProfileCount++;
         }
-        return updatedProfileCount;
+
     }
 
-    private void retryAddSegmentFunction(String segmentId, String failedProfileId) {
-        Profile profileToAddUpdated = persistenceService.load(failedProfileId, Profile.class);
+    private void retryAddSegmentFunction(String segmentId, String profileId) {
+        Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
         Map<String, Object> updateFields = propertiesMapForAddingSegment(segmentId, profileToAddUpdated);
         persistenceService.update(profileToAddUpdated, null, Profile.class, updateFields, false);
     }
 
-    private void retryRemoveSegmentFunction(String segmentId, String failedProfileId) {
-        Profile profileToAddUpdated = persistenceService.load(failedProfileId, Profile.class);
+    private void retryRemoveSegmentFunction(String segmentId, String profileId) {
+        Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
         Map<String, Object> updateFields = propertiesMapForAddingSegment(segmentId, profileToAddUpdated);
         persistenceService.update(profileToAddUpdated, null, Profile.class, updateFields);
     }
