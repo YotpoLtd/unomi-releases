@@ -33,6 +33,7 @@
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
             <cm:property name="index.prefix" value="context"/>
+            <cm:property name="mappingOverride" value="false"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
@@ -58,6 +59,7 @@
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
+            <cm:property name="useBatchingForUpdate" value="true" />
 
             <cm:property name="username" value="" />
             <cm:property name="password" value="" />
@@ -65,7 +67,6 @@
             <cm:property name="sslTrustAllCertificates" value="false" />
             <cm:property name="throwExceptions" value="false" />
             <cm:property name="alwaysOverwrite" value="true" />
-            <cm:property name="refreshBeforeQuery" value="false" />
 
         </cm:default-properties>
     </cm:property-placeholder>
@@ -98,6 +99,7 @@
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexPrefix" value="${es.index.prefix}"/>
+        <property name="mappingOverride" value="${es.mappingOverride}"/>
         <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
         <property name="monthlyIndexMappingTotalFieldsLimit" value="${es.monthlyIndex.indexMappingTotalFieldsLimit}"/>
@@ -132,6 +134,7 @@
         <property name="hazelcastInstance" ref="hazelcastInstance" />
         <property name="itemClassesToCache" value="${es.itemClassesToCache}" />
         <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
+        <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}" />
 
         <property name="username" value="${es.username}" />
         <property name="password" value="${es.password}" />
@@ -139,7 +142,6 @@
         <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}" />
         <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
-        <property name="refreshBeforeQuery" value="${es.refreshBeforeQuery}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
