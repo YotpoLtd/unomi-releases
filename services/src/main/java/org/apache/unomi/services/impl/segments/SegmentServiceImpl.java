@@ -52,6 +52,9 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
@@ -944,9 +947,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             if (batchSegmentProfileUpdate)
             {
                 //adding segments from profiles
-                updatedProfileCount = batchUpdateSegment(profilesToAdd, segmentId, updatedProfileCount,true);
+                updatedProfileCount = batchUpdateSegment(profilesToAdd, segmentId, updatedProfileCount, this::batchUpdateAddSegment);
                 //removing segments from profiles
-                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount,false);
+                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount, this::batchUpdateRemoveSegment);
             }
             else{
                 //adding segments from profiles
@@ -957,7 +960,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         } else {
             PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
             if (batchSegmentProfileUpdate) {
-                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount, false);
+                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount, this::batchUpdateRemoveSegment);
             }
             else{
                 updatedProfileCount = updateProfilesSegments(profilesToRemove, updatedProfileCount, profile -> propertiesMapForRemovingSegment(profile, segmentId));
@@ -984,13 +987,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return updatedProfileCount;
     }
 
-    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, long updatedProfileCount, boolean isAddToSegment) {
+    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, long updatedProfileCount, BiConsumer<PartialList<Profile>,String> batchSegmentUpdateFunction) {
         while (profilesToUpdate.getList().size() > 0) {
             long profilesToRemoveStartTime = System.currentTimeMillis();
-            if (isAddToSegment)
-                batchUpdateAddSegment(profilesToUpdate, segmentId);
-            else
-                batchUpdateRemoveSegment(profilesToUpdate, segmentId);
+
+            batchSegmentUpdateFunction.accept(profilesToUpdate, segmentId);
 
             if (sendProfileUpdateEventForSegmentUpdate) {
                 long sendProfileUpdatesEventsStartTime = System.currentTimeMillis();
