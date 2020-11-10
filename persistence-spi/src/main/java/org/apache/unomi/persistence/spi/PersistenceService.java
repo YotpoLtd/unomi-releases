@@ -137,6 +137,16 @@ public interface PersistenceService {
      */
     boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
 
+    /**
+     * Updates Batch of items of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
+     * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     *
+     * @param items         A map the consist of item (key) and properties to update (value)
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @param retryMethodForFailedItemIds  a method that recives list of falied items ids to process for a retry
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
     boolean updateBatch(Map<Item, Map> items, Date dateHint, Class clazz, Consumer<List<String>> retryMethodForFailedItemIds);
 
     /**

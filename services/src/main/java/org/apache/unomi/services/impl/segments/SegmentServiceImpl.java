@@ -53,8 +53,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
@@ -880,8 +878,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     pastEventCounts.put(propertyKey, entry.getValue());
                     Map<String, Object> systemProperties = new HashMap<>();
                     systemProperties.put("pastEvents", pastEventCounts);
-                    systemProperties.put("lastUpdated", new Date());
                     try {
+                        systemProperties.put("lastUpdated", new Date());
                         Profile profile = new Profile();
                         profile.setItemId(profileId);
                         persistenceService.update(profile, null, Profile.class, "systemProperties", systemProperties);
@@ -969,18 +967,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
-    private long updateProfilesSegments(PartialList<Profile> profilesToRemove, long updatedProfileCount, Function<Profile, Map> profilePropertiesUpdateFunction) {
-        while (profilesToRemove.getList().size() > 0) {
-            long profilesToRemoveStartTime = System.currentTimeMillis();
-            for (Profile profileToRemove : profilesToRemove.getList()) {
-                updateProfileWithRetry(profileToRemove, profilePropertiesUpdateFunction);
+    private long updateProfilesSegments(PartialList<Profile> profilesToUpdate, long updatedProfileCount, Function<Profile, Map> profilePropertiesUpdateFunction) {
+        while (profilesToUpdate.getList().size() > 0) {
+            long profilesToUpdateStartTime = System.currentTimeMillis();
+            for (Profile profileToUpdate : profilesToUpdate.getList()) {
+                updateProfileWithRetry(profileToUpdate, profilePropertiesUpdateFunction);
                 if (sendProfileUpdateEventForSegmentUpdate)
-                    sendProfileUpdateEvent(profileToRemove);
+                    sendProfileUpdateEvent(profileToUpdate);
                 updatedProfileCount++;
             }
-            logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
-            profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
-            if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
+            logger.info("{} profiles segment updated in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - profilesToUpdateStartTime);
+            profilesToUpdate = persistenceService.continueScrollQuery(Profile.class, profilesToUpdate.getScrollIdentifier(), profilesToUpdate.getScrollTimeValidity());
+            if (profilesToUpdate == null || profilesToUpdate.getList().size() == 0) {
                 break;
             }
         }
@@ -1001,7 +999,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 logger.debug("{} sendProfileUpdatesEvents  in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - sendProfileUpdatesEventsStartTime);
             }
 
-            logger.info("{} profiles updated of segment in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
+            logger.info("{} batch profiles updated of segment in {}ms", profilesToUpdate.size(), System.currentTimeMillis() - profilesToRemoveStartTime);
             updatedProfileCount = updatedProfileCount + profilesToUpdate.size();
             profilesToUpdate = persistenceService.continueScrollQuery(Profile.class, profilesToUpdate.getScrollIdentifier(), profilesToUpdate.getScrollTimeValidity());
             if (profilesToUpdate == null || profilesToUpdate.getList().size() == 0) {
@@ -1070,7 +1068,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                         persistenceService.update(profile, null, Profile.class, updateFields);
                     }
                 });
-
     }
 
     private Map<String, Object> propertiesMapForAddingSegment(Profile profileToAdd, String segmentId) {
