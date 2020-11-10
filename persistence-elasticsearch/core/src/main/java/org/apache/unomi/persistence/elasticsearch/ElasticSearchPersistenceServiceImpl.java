@@ -115,8 +115,12 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -862,9 +866,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public List<String> updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
-        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
-            protected List<String> execute(Object... args) throws Exception {
+    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> retryMethod) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected Boolean execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
                 BulkRequest bulkRequest = new BulkRequest();
                 items.forEach((item, source) -> {
@@ -895,11 +899,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         failedIds.add(bulkItemResponse.getId());
                     });
                 }
-                return failedIds;
+
+                retryMethod.accept(failedIds);
+                return true;
             }
         }.catchingExecuteInClassLoader(true);
-        return result;
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
+
+
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {

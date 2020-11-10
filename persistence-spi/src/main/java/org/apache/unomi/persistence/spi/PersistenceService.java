@@ -25,6 +25,9 @@ import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * A service to provide persistence and retrieval of context server entities.
@@ -134,7 +137,7 @@ public interface PersistenceService {
      */
     boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
 
-    List<String> updateBatch(Map<Item, Map> items, Date dateHint, Class clazz);
+    boolean updateBatch(Map<Item, Map> items, Date dateHint, Class clazz, Consumer<List<String>> retryUpdateSegmentMethod);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
