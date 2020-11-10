@@ -866,41 +866,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> retryMethod) {
+    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> retryMethodForFailedItemIds) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
                 BulkRequest bulkRequest = new BulkRequest();
                 items.forEach((item, source) -> {
-                    String itemType = Item.getItemType(clazz);
-                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
-                    updateRequest.doc(source);
-
-                    if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            updateRequest.setIfSeqNo(seqNo);
-                            updateRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                    }
-
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
                     bulkRequest.add(updateRequest);
                 });
 
                 BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
                 logger.info("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
 
-                List<String> failedIds = new ArrayList<>();
-                if (bulkResponse.hasFailures()){
-                    Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
-                    iterator.forEachRemaining(bulkItemResponse -> {
-                        failedIds.add(bulkItemResponse.getId());
-                    });
+                if (retryMethodForFailedItemIds != null){
+                    List<String> failedIds = new ArrayList<>();
+                    if (bulkResponse.hasFailures()){
+                        Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
+                        iterator.forEachRemaining(bulkItemResponse -> {
+                            failedIds.add(bulkItemResponse.getId());
+                        });
+                    }
+                    retryMethodForFailedItemIds.accept(failedIds);
                 }
-
-                retryMethod.accept(failedIds);
                 return true;
             }
         }.catchingExecuteInClassLoader(true);
@@ -911,26 +899,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-
-
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
-                    updateRequest.doc(source);
-
-                    if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            updateRequest.setIfSeqNo(seqNo);
-                            updateRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                    }
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
@@ -949,6 +923,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } else {
             return result;
         }
+    }
+
+    private UpdateRequest createUpdateRequest(Class clazz, Date dateHint, Item item, Map source, boolean alwaysOverwrite) {
+        String itemType = Item.getItemType(clazz);
+        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+        updateRequest.doc(source);
+
+        if (!alwaysOverwrite) {
+            Long seqNo = (Long) item.getMetadata(SEQ_NO);
+            Long primaryTerm = (Long) item.getMetadata(PRIMARY_TERM);
+
+            if (seqNo != null && primaryTerm != null) {
+                updateRequest.setIfSeqNo(seqNo);
+                updateRequest.setIfPrimaryTerm(primaryTerm);
+            }
+        }
+        return updateRequest;
     }
 
     @Override
