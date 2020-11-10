@@ -18,12 +18,15 @@
 package org.apache.unomi.plugins.baseplugin.actions;
 
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -36,6 +39,10 @@ import java.util.Map;
 import javax.xml.bind.DatatypeConverter;
 
 public class SetEventOccurenceCountAction implements ActionExecutor {
+
+    private static final Logger logger = LoggerFactory.getLogger(SetEventOccurenceCountAction.class.getName());
+
+
     private DefinitionsService definitionsService;
 
     private PersistenceService persistenceService;
@@ -50,7 +57,11 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     @Override
     public int execute(Action action, Event event) {
+        LocalDateTime fromDateTime = null;
+        LocalDateTime toDateTime = null;
+
         final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+        String generatedEventKey = (String) pastEventCondition.getParameter("generatedPropertyKey");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
@@ -65,6 +76,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         c.setParameter("comparisonOperator", "equals");
         c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
+
+        Condition notCurrentEventCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        notCurrentEventCondition.setParameter("propertyName", "itemId");
+        notCurrentEventCondition.setParameter("comparisonOperator", "notEquals");
+        notCurrentEventCondition.setParameter("propertyValue", event.getItemId());
+        conditions.add(notCurrentEventCondition);
 
         Integer numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
         String fromDate = (String) pastEventCondition.getParameter("fromDate");
@@ -84,6 +101,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
             startDateCondition.setParameter("propertyValueDate", fromDate);
             conditions.add(startDateCondition);
+
+            Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
+            fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
         if (toDate != null)  {
             Condition endDateCondition = new Condition();
@@ -92,30 +112,24 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
             endDateCondition.setParameter("propertyValueDate", toDate);
             conditions.add(endDateCondition);
+
+            Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+            toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
 
         andCondition.setParameter("subConditions", conditions);
 
-        long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+        long eventCount = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+        long eventCounterInProfile = getEventCounterFromProfile(event.getProfile(), generatedEventKey);
 
-        Map<String, Object> pastEvents = (Map<String, Object>) event.getProfile().getSystemProperties().get("pastEvents");
-        if (pastEvents == null) {
-            pastEvents = new LinkedHashMap<>();
-            event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
+        if (eventCount != eventCounterInProfile) {
+            logger.warn("Profile counter is not synced with event count");
         }
-
-        Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
-        Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
 
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
-        LocalDateTime fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
-        LocalDateTime toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
-
         if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
-            count++;
+            updateEventCounterInProfile(event.getProfile(), generatedEventKey, eventCount + 1);
         }
-
-        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
 
         return EventService.PROFILE_UPDATED;
     }
@@ -141,5 +155,23 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         }
 
         return inTimeRange;
+    }
+
+    private long getEventCounterFromProfile(Profile profile, String eventKey) {
+        Map<String, Object> pastEvents = (Map<String, Object>) profile.getSystemProperties().get("pastEvents");
+        if (pastEvents != null) {
+            if (pastEvents.get(eventKey) != null) {
+                return ((Number)pastEvents.get(eventKey)).longValue();
+            }
+        }
+        return 0;
+    }
+
+    private void updateEventCounterInProfile(Profile profile, String eventKey, long counter) {
+        if (!profile.hasSystemProperty("pastEvents")) {
+            profile.setSystemProperty("pastEvents", new LinkedHashMap<>());
+        }
+        Map<String, Object> pastEventCounters = (Map<String, Object>)profile.getSystemProperty("pastEvents");
+        pastEventCounters.put(eventKey, counter);
     }
 }

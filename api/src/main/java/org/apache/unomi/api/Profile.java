@@ -123,6 +123,16 @@ public class Profile extends Item {
     }
 
     /**
+     * Retrieves the value of a system property by its name
+     *
+     * @param propertyKey system property key
+     * @return system proprtyu value
+     */
+    public Object getSystemProperty(String propertyKey) {
+        return systemProperties.get(propertyKey);
+    }
+
+    /**
      * Specifies the system property name - value pairs for this profile.
      *
      * @param systemProperties a Map of system property name - value pairs for this profile
@@ -130,6 +140,18 @@ public class Profile extends Item {
     public void setSystemProperties(Map<String, Object> systemProperties) {
         this.systemProperties = systemProperties;
     }
+
+    /**
+     * Returns true if system property exist and not null
+     *
+     * @param propertyName System property name
+     * @return true if exist and not null. False otherwise.
+     */
+    public boolean hasSystemProperty(String propertyName) {
+        return this.systemProperties.get(propertyName) != null;
+
+    }
+
 
     /**
      * Sets a system property, overwriting an existing one if it existed. This call will also created the system
