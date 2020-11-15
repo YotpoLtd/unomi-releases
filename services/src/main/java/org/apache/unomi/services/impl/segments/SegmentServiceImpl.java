@@ -1064,6 +1064,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                         Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
                         Map<String, Object> updateFields =  profilePropertiesUpdateFunction.apply(profileToAddUpdated);
                         persistenceService.update(profileToAddUpdated, null, Profile.class, updateFields);
+                        Profile profileToUpdate = persistenceService.load(profileId, Profile.class); //reloading to avoid document seq conflict
+                        Map<String, Object> updateFields =  profilePropertiesUpdateFunction.apply(profileToUpdate);
+                        persistenceService.update(profileToUpdate, null, Profile.class, updateFields);
                     }
                     else{
                         Map<String, Object> updateFields =  profilePropertiesUpdateFunction.apply(profile);;
