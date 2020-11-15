@@ -945,29 +945,30 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             if (batchSegmentProfileUpdate)
             {
                 //adding segments from profiles
-                updatedProfileCount = batchUpdateSegment(profilesToAdd, segmentId, updatedProfileCount, this::batchUpdateAddSegment);
+                updatedProfileCount += batchUpdateSegment(profilesToAdd, segmentId, this::batchUpdateAddSegment);
                 //removing segments from profiles
-                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount, this::batchUpdateRemoveSegment);
+                updatedProfileCount += batchUpdateSegment(profilesToRemove, segmentId, this::batchUpdateRemoveSegment);
             }
             else{
                 //adding segments from profiles
-                updatedProfileCount = updateProfilesSegments(profilesToAdd, updatedProfileCount, profile -> buildPropertiesMapForAddingSegment(profile, segmentId));
+                updatedProfileCount += updateProfilesSegments(profilesToAdd, profile -> buildPropertiesMapForAddingSegment(profile, segmentId));
                 //removing segments from profiles
-                updatedProfileCount = updateProfilesSegments(profilesToRemove, updatedProfileCount, profile -> buildPropertiesMapForRemovingSegment(profile, segmentId));
+                updatedProfileCount += updateProfilesSegments(profilesToRemove, profile -> buildPropertiesMapForRemovingSegment(profile, segmentId));
             }
         } else {
             PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
             if (batchSegmentProfileUpdate) {
-                updatedProfileCount = batchUpdateSegment(profilesToRemove, segmentId, updatedProfileCount, this::batchUpdateRemoveSegment);
+                updatedProfileCount += batchUpdateSegment(profilesToRemove, segmentId, this::batchUpdateRemoveSegment);
             }
             else{
-                updatedProfileCount = updateProfilesSegments(profilesToRemove, updatedProfileCount, profile -> buildPropertiesMapForRemovingSegment(profile, segmentId));
+                updatedProfileCount += updateProfilesSegments(profilesToRemove, profile -> buildPropertiesMapForRemovingSegment(profile, segmentId));
             }
         }
         logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
-    private long updateProfilesSegments(PartialList<Profile> profilesToUpdate, long updatedProfileCount, Function<Profile, Map> profilePropertiesUpdateFunction) {
+    private long updateProfilesSegments(PartialList<Profile> profilesToUpdate, Function<Profile, Map> profilePropertiesUpdateFunction) {
+        long updatedProfileCount = 0;
         while (profilesToUpdate.getList().size() > 0) {
             long profilesToUpdateStartTime = System.currentTimeMillis();
             for (Profile profileToUpdate : profilesToUpdate.getList()) {
@@ -985,7 +986,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return updatedProfileCount;
     }
 
-    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, long updatedProfileCount, BiConsumer<List<Profile>,String> batchSegmentUpdateFunction) {
+    private long batchUpdateSegment(PartialList<Profile> profilesToUpdate, String segmentId, BiConsumer<List<Profile>,String> batchSegmentUpdateFunction) {
+        long updatedProfileCount = 0;
         while (profilesToUpdate.getList().size() > 0) {
             long startTime = System.currentTimeMillis();
 

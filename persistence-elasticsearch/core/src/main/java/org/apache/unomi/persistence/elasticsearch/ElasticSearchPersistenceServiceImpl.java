@@ -862,7 +862,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> retryMethodForFailedItemIds) {
+    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> errorHandlerCallback) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
@@ -873,9 +873,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 });
 
                 BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                logger.info("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
 
-                if (retryMethodForFailedItemIds != null){
+                if (errorHandlerCallback != null){
                     List<String> failedIds = new ArrayList<>();
                     if (bulkResponse.hasFailures()){
                         Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
@@ -883,7 +883,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             failedIds.add(bulkItemResponse.getId());
                         });
                     }
-                    retryMethodForFailedItemIds.accept(failedIds);
+                    errorHandlerCallback.accept(failedIds);
                 }
                 return true;
             }
