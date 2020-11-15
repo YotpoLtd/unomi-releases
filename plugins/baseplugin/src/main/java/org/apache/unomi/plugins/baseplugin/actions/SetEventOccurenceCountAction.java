@@ -50,6 +50,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     @Override
     public int execute(Action action, Event event) {
+        LocalDateTime fromDateTime = null;
+        LocalDateTime toDateTime = null;
+
         final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
 
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
@@ -84,6 +87,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
             startDateCondition.setParameter("propertyValueDate", fromDate);
             conditions.add(startDateCondition);
+
+            Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
+            fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
         if (toDate != null)  {
             Condition endDateCondition = new Condition();
@@ -92,6 +98,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
             endDateCondition.setParameter("propertyValueDate", toDate);
             conditions.add(endDateCondition);
+
+            Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+            toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
 
         andCondition.setParameter("subConditions", conditions);
@@ -104,12 +113,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
 
-        Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
-        Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
-
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
-        LocalDateTime fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
-        LocalDateTime toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
 
         if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
             count++;
