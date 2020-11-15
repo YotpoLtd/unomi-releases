@@ -32,7 +32,6 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
@@ -220,7 +219,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        definitionsService.resolveConditionType(condition);
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -282,8 +281,7 @@ public class EventServiceImpl implements EventService {
 
     public boolean hasEventAlreadyBeenRaised(Event event) {
         Event pastEvent = this.persistenceService.load(event.getItemId(), Event.class);
-        int newVersionIndicator = persistenceService.isEventuallyConsistent() ? 1 : 2;
-        if (pastEvent != null && pastEvent.getVersion() >= newVersionIndicator) {
+        if (pastEvent != null && pastEvent.getVersion() >= 1) {
             if ((pastEvent.getSessionId() != null && pastEvent.getSessionId().equals(event.getSessionId())) ||
                     (pastEvent.getProfileId() != null && pastEvent.getProfileId().equals(event.getProfileId())))  {
                 return true;
