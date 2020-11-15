@@ -165,6 +165,24 @@ public class Profile extends Item {
     }
 
     /**
+     * Adds a Segment to the Profile set of segments
+     *
+     * @param segmentId
+     */
+    public void addSegment(String segmentId){
+        this.segments.add(segmentId);
+    }
+
+    /**
+     * Removes a Segment from the Profile set of segments
+     *
+     * @param segmentId
+     */
+    public void removeSegment(String segmentId){
+        this.segments.remove(segmentId);
+    }
+
+    /**
      * Sets the identifiers of the segments this profile is a member of.
      *
      * TODO: should be removed from the API

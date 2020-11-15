@@ -177,9 +177,9 @@ public class PropertyConditionEvaluatorTest {
     public static Profile generateMockProfile() {
         Profile mockProfile = new Profile();
         mockProfile.setItemId("mockProfileId");
-        mockProfile.getSegments().add("segment1");
-        mockProfile.getSegments().add("segment2");
-        mockProfile.getSegments().add("segment3");
+        mockProfile.addSegment("segment1");
+        mockProfile.addSegment("segment2");
+        mockProfile.addSegment("segment3");
         return mockProfile;
     }
 

@@ -956,7 +956,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 updatedProfileCount += updateProfilesSegments(profilesToRemove, profile -> buildPropertiesMapForRemovingSegment(profile, segmentId));
             }
         } else {
-            PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
+            PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
             if (batchSegmentProfileUpdate) {
                 updatedProfileCount += batchUpdateSegment(profilesToRemove, segmentId, this::batchUpdateRemoveSegment);
             }
@@ -1073,14 +1073,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private Map<String, Object> buildPropertiesMapForAddingSegment(Profile profileToAdd, String segmentId) {
-        profileToAdd.getSegments().add(segmentId);
+        profileToAdd.addSegment(segmentId);
         profileToAdd.setSystemProperty("lastUpdated", new Date());
 
         return getPropertiesForSegmentUpdate(profileToAdd);
     }
 
     private Map<String, Object> buildPropertiesMapForRemovingSegment(Profile profileToRemove, String segmentId) {
-        profileToRemove.getSegments().remove(segmentId);
+        profileToRemove.removeSegment(segmentId);
         profileToRemove.setSystemProperty("lastUpdated", new Date());
 
         return getPropertiesForSegmentUpdate(profileToRemove);
