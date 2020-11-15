@@ -1061,9 +1061,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Failsafe.with(retryPolicy)
                 .run(executionContext -> {
                     if (executionContext.isRetry()){
-                        Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
-                        Map<String, Object> updateFields =  profilePropertiesUpdateFunction.apply(profileToAddUpdated);
-                        persistenceService.update(profileToAddUpdated, null, Profile.class, updateFields);
                         Profile profileToUpdate = persistenceService.load(profileId, Profile.class); //reloading to avoid document seq conflict
                         Map<String, Object> updateFields =  profilePropertiesUpdateFunction.apply(profileToUpdate);
                         persistenceService.update(profileToUpdate, null, Profile.class, updateFields);
