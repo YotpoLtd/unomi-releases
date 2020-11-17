@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,7 @@ public class ContextServlet extends HttpServlet {
     private PrivacyService privacyService;
     private PersonalizationService personalizationService;
     private ConfigSharingService configSharingService;
+    private PersistenceService persistenceService;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -70,6 +72,33 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        ContextRequest contextRequest = null;
+        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+        JsonFactory factory = mapper.getFactory();
+        String stringPayload = HttpUtils.getPayload(request);
+
+        contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
+        List<Event> events = contextRequest.getEvents();
+        List eventsToPersist = new ArrayList<>();
+        for (Event event: events) {
+            if (event.isPersistent()) {
+                eventsToPersist.add(event);
+            }
+        }
+        persistenceService.save(eventsToPersist);
+        for (Event event: events) {
+            event.setPersistent(false);
+            ContextRequest contextRequestOneEvent = new ContextRequest();
+            contextRequestOneEvent.setProfileId(event.getProfileId());
+            List eventsRequest = new ArrayList<>();
+            eventsRequest.add(event);
+            contextRequestOneEvent.setEvents(eventsRequest);
+            contextRequestOneEvent
+            serviceInner(request, response);
+        }
+    }
+
+    public void serviceInner(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             final Date timestamp = new Date();
             if (request.getParameter("timestamp") != null) {
@@ -442,6 +471,10 @@ public class ContextServlet extends HttpServlet {
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
     }
 
     public void setRulesService(RulesService rulesService) {

@@ -784,6 +784,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public boolean save(final List<Item> items) {
+        try {
+            BulkRequest bulkRequest = new BulkRequest();
+            for (Item item : items) {
+                String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
+                String itemType = item.getItemType();
+                String itemId = item.getItemId();
+                putInCache(itemId, item);
+                String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
+                IndexRequest indexRequest = new IndexRequest(index);
+                indexRequest.id(itemId);
+                indexRequest.source(source, XContentType.JSON);
+                bulkRequest.add(indexRequest);
+            }
+            bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
+            bulkRequest.setRefreshPolicy("wait_for");
+            client.bulk(bulkRequest, RequestOptions.DEFAULT);
+        }
+        catch (Exception e) {}
+        return true;
+    }
+
+    @Override
     public boolean save(final Item item, final boolean useBatching) {
         return save(item, useBatching, alwaysOverwrite);
     }
