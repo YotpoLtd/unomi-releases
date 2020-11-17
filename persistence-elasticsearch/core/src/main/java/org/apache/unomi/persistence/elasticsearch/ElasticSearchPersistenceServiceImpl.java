@@ -118,6 +118,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -862,19 +863,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
-                    updateRequest.doc(source);
-
-                    if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            updateRequest.setIfSeqNo(seqNo);
-                            updateRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                    }
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
@@ -894,6 +883,58 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return result;
         }
     }
+
+    private UpdateRequest createUpdateRequest(Class clazz, Date dateHint, Item item, Map source, boolean alwaysOverwrite) {
+        String itemType = Item.getItemType(clazz);
+        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+        updateRequest.doc(source);
+
+        if (!alwaysOverwrite) {
+            Long seqNo = (Long) item.getMetadata(SEQ_NO);
+            Long primaryTerm = (Long) item.getMetadata(PRIMARY_TERM);
+
+            if (seqNo != null && primaryTerm != null) {
+                updateRequest.setIfSeqNo(seqNo);
+                updateRequest.setIfPrimaryTerm(primaryTerm);
+            }
+        }
+        return updateRequest;
+    }
+
+    @Override
+    public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> errorHandlerCallback) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected Boolean execute(Object... args) throws Exception {
+                long batchRequestStartTime = System.currentTimeMillis();
+                BulkRequest bulkRequest = new BulkRequest();
+                items.forEach((item, source) -> {
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
+                    bulkRequest.add(updateRequest);
+                });
+
+                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+
+                if (errorHandlerCallback != null){
+                    List<String> failedIds = new ArrayList<>();
+                    if (bulkResponse.hasFailures()){
+                        Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
+                        iterator.forEachRemaining(bulkItemResponse -> {
+                            failedIds.add(bulkItemResponse.getId());
+                        });
+                    }
+                    errorHandlerCallback.accept(failedIds);
+                }
+                return true;
+            }
+        }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
+    }
+
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
