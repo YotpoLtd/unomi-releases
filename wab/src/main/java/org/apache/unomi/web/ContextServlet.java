@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Writer;
 import java.util.*;
 
@@ -76,7 +75,6 @@ public class ContextServlet extends HttpServlet {
         ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
         JsonFactory factory = mapper.getFactory();
         String stringPayload = HttpUtils.getPayload(request);
-
         contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
         List<Event> events = contextRequest.getEvents();
         List eventsToPersist = new ArrayList<>();
@@ -93,7 +91,6 @@ public class ContextServlet extends HttpServlet {
             List eventsRequest = new ArrayList<>();
             eventsRequest.add(event);
             contextRequestOneEvent.setEvents(eventsRequest);
-            contextRequestOneEvent
             serviceInner(request, response);
         }
     }
