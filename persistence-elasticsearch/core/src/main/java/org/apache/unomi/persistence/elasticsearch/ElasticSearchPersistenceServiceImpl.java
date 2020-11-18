@@ -198,6 +198,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
+    private RequestOptions requestOptions;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -434,6 +435,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 if (client != null && bulkProcessor == null) {
                     bulkProcessor = getBulkProcessor();
                 }
+
+                RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+
+                if (aggQueryMaxResponseSizeHttp != null) {
+                    builder.setHttpAsyncResponseConsumerFactory(
+                            new HttpAsyncResponseConsumerFactory
+                                    .HeapBufferedResponseConsumerFactory(aggQueryMaxResponseSizeHttp));
+                }
+
+                requestOptions = builder.build();
 
                 logger.info("Waiting for GREEN cluster status...");
 
@@ -912,8 +923,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     bulkRequest.add(updateRequest);
                 });
 
-                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+                BulkResponse bulkResponse = client.bulk(bulkRequest, requestOptions);
+                logger.info("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
 
                 if (errorHandlerCallback != null){
                     List<String> failedIds = new ArrayList<>();
@@ -1615,7 +1626,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     searchSourceBuilder.version(true);
                     searchRequest.source(searchSourceBuilder);
-                    SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+                    SearchResponse response = client.search(searchRequest, requestOptions);
 
                     if (size == -1) {
                         // Scroll until no more hits are returned
@@ -1631,7 +1642,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                             SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
                             searchScrollRequest.scroll(keepAlive);
-                            response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                            response = client.scroll(searchScrollRequest, requestOptions);
 
                             // If we have no more hits, exit
                             if (response.getHits().getHits().length == 0) {
@@ -1640,7 +1651,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                         ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
                         clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                        client.clearScroll(clearScrollRequest, requestOptions);
                     } else {
                         SearchHits searchHits = response.getHits();
                         scrollIdentifier = response.getScrollId();
@@ -1650,7 +1661,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // we have no results, we must clear the scroll request immediately.
                             ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
                             clearScrollRequest.addScrollId(response.getScrollId());
-                            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                            client.clearScroll(clearScrollRequest, requestOptions);
                         }
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
@@ -1690,12 +1701,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollIdentifier);
                     searchScrollRequest.scroll(keepAlive);
-                    SearchResponse response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                    SearchResponse response = client.scroll(searchScrollRequest, requestOptions);
 
                     if (response.getHits().getHits().length == 0) {
                         ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
                         clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                        client.clearScroll(clearScrollRequest, requestOptions);
                     } else {
                         for (SearchHit searchHit : response.getHits().getHits()) {
                             // add hit to results
@@ -1850,15 +1861,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 searchRequest.source(searchSourceBuilder);
 
-                RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
-
-                if (aggQueryMaxResponseSizeHttp != null) {
-                    builder.setHttpAsyncResponseConsumerFactory(
-                            new HttpAsyncResponseConsumerFactory
-                                    .HeapBufferedResponseConsumerFactory(aggQueryMaxResponseSizeHttp));
-                }
-
-                SearchResponse response = client.search(searchRequest, builder.build());
+                SearchResponse response = client.search(searchRequest, requestOptions);
                 Aggregations aggregations = response.getAggregations();
 
 
