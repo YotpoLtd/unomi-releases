@@ -954,7 +954,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private long batchUpdateSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd) {
         long updatedProfileCount = 0;
+        long queryTime = System.currentTimeMillis();
         PartialList<Profile> profiles = persistenceService.query(profilesToUpdateCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
+        logger.info("{} batch profiles queryTime of segment {} in {}ms", profiles.size(),segmentId, System.currentTimeMillis() - queryTime);
         while (profiles != null && profiles.getList().size() > 0) {
             long startTime = System.currentTimeMillis();
 
@@ -973,7 +975,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
             logger.info("{} batch profiles updated of segment {} in {}ms", profiles.size(),segmentId, System.currentTimeMillis() - startTime);
             updatedProfileCount += profiles.size();
+
+            long scrollTime = System.currentTimeMillis();
             profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
+            logger.info("{} batch profiles scrollTime of segment {} in {}ms", profiles.size(),segmentId, System.currentTimeMillis() - scrollTime);
         }
         return updatedProfileCount;
     }
