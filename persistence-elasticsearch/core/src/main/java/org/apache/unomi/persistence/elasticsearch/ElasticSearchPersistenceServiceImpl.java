@@ -23,7 +23,6 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -180,6 +179,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String password;
     private boolean sslEnable = false;
     private boolean sslTrustAllCertificates = false;
+    private WriteRequest.RefreshPolicy refreshPolicyOnSave = WriteRequest.RefreshPolicy.NONE;
 
     private int aggregateQueryBucketSize = 5000;
 
@@ -204,6 +204,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
+    }
+
+    public void setRefreshPolicyOnSave(String refreshPolicyOnSave) {
+        if (refreshPolicyOnSave.equals("true")) {
+            this.refreshPolicyOnSave = WriteRequest.RefreshPolicy.IMMEDIATE;
+        } else if (refreshPolicyOnSave.equals("wait_for")) {
+            this.refreshPolicyOnSave = WriteRequest.RefreshPolicy.WAIT_UNTIL;
+        }
     }
 
     public void setElasticSearchAddresses(String elasticSearchAddresses) {
@@ -824,6 +832,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
+                            if (!item.getItemType().equals("rulestats")) {
+                                indexRequest.setRefreshPolicy(refreshPolicyOnSave);
+                            }
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
