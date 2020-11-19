@@ -58,6 +58,8 @@ public class EventServiceImpl implements EventService {
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
 
+    private boolean createProfileRuleEnabled = true;
+
     public void init() {
         logger.info("Event service initialized.");
     }
@@ -140,30 +142,45 @@ public class EventServiceImpl implements EventService {
     }
 
     public int send(Event event) {
-        return send(event, 0);
+        return send(event, 0, false);
     }
 
-    private int send(Event event, int depth) {
+
+    public int send(List<Event> events) {
+        List eventsToPersist = new ArrayList<>();
+        for (Event event: events) {
+            if (event.isPersistent()) {
+                eventsToPersist.add(event);
+            }
+        }
+        persistenceService.save(eventsToPersist);
+        for (Event event: events) {
+            send(event, 0, true);
+        }
+        return 0;
+    }
+
+    private int send(Event event, int depth, boolean alreadySaved) {
         if (depth > MAX_RECURSION_DEPTH) {
             logger.warn("Max recursion depth reached");
             return NO_CHANGE;
         }
 
         boolean saveSucceeded = true;
-        if (event.isPersistent()) {
+        if (event.isPersistent() && !alreadySaved) {
             saveSucceeded = persistenceService.save(event, null, true);
         }
 
         int changes;
 
-        if (saveSucceeded) {
+        if (saveSucceeded || alreadySaved) {
             changes = NO_CHANGE;
             final Session session = event.getSession();
             if (event.isPersistent() && session != null) {
                 session.setLastEventDate(event.getTimeStamp());
             }
 
-            if (event.getProfile() != null) {
+            if (event.getProfile() != null || createProfileRuleEnabled) {
                 for (EventListenerService eventListenerService : eventListeners) {
                     if (eventListenerService.canHandle(event)) {
                         changes |= eventListenerService.onEvent(event);
@@ -178,7 +195,7 @@ public class EventServiceImpl implements EventService {
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
-                    changes |= send(profileUpdated, depth + 1);
+                    changes |= send(profileUpdated, depth + 1, false);
                     if (session != null && session.getProfileId() != null) {
                         changes |= SESSION_UPDATED;
                         session.setProfile(event.getProfile());

@@ -30,6 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.util.List;
 
 /**
  * A JAX-RS endpoint to access information about the context server's events.
@@ -74,4 +75,9 @@ public class EventServiceEndpoint {
         return eventService.getEvent(id);
     }
 
+    @POST
+    @Path("/add")
+    public void addEvents(List<Event> events) {
+        eventService.send(events);
+    }
 }

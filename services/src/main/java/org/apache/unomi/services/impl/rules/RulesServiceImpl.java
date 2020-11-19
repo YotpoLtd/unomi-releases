@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.impl.rules;
 
+import com.google.common.collect.Lists;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
@@ -259,7 +260,15 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public int onEvent(Event event) {
-        Set<Rule> rules = getMatchingRules(event);
+        List<Rule> rules = Lists.newArrayList(getMatchingRules(event));
+
+        Collections.sort(rules, new Comparator<Rule>() {
+            public int compare(Rule r1, Rule r2) {
+                if (r1.getPriority() > r2.getPriority()) return 1;
+                if (r1.getPriority() < r2.getPriority()) return -1;
+                return 0;
+            }});
+
 
         int changes = EventService.NO_CHANGE;
         for (Rule rule : rules) {

@@ -60,6 +60,8 @@ public interface EventService {
      */
     int send(Event event);
 
+    int send(List<Event> events);
+
     /**
      * Check if the sender is allowed to sent the speecified event. Restricted event must be explicitely allowed for a sender.
      *

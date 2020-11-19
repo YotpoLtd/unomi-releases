@@ -90,6 +90,14 @@ public interface PersistenceService {
     /**
      * Persists the specified Item in the context server.
      *
+     * @param items the items to persist
+     * @return {@code true} if the item was properly persisted, {@code false} otherwise
+     */
+    boolean save(List<Item> items);
+
+    /**
+     * Persists the specified Item in the context server.
+     *
      * @param item the item to persist
      * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
      *                 the call to this method and the actual saving in the persistence backend.
