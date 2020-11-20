@@ -237,6 +237,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetEventOccurenceCountAction">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="eventService" ref="eventService"/>
         </bean>
     </service>
 
