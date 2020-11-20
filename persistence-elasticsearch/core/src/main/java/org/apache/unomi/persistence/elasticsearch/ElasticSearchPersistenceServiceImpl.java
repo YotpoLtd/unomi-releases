@@ -36,6 +36,7 @@ import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
+import org.apache.unomi.persistence.spi.PersistencePolicy;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.ElasticsearchStatusException;
@@ -179,7 +180,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String password;
     private boolean sslEnable = false;
     private boolean sslTrustAllCertificates = false;
-    private WriteRequest.RefreshPolicy refreshPolicyOnSave = WriteRequest.RefreshPolicy.NONE;
 
     private int aggregateQueryBucketSize = 5000;
 
@@ -204,14 +204,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
-    }
-
-    public void setRefreshPolicyOnSave(String refreshPolicyOnSave) {
-        if (refreshPolicyOnSave.equals("true")) {
-            this.refreshPolicyOnSave = WriteRequest.RefreshPolicy.IMMEDIATE;
-        } else if (refreshPolicyOnSave.equals("wait_for")) {
-            this.refreshPolicyOnSave = WriteRequest.RefreshPolicy.WAIT_UNTIL;
-        }
     }
 
     public void setElasticSearchAddresses(String elasticSearchAddresses) {
@@ -798,6 +790,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        return save(item, useBatchingOption, alwaysOverwriteOption, PersistencePolicy.NONE);
+    }
+
+    @Override
+    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption,
+                        PersistencePolicy operationPolicy) {
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
@@ -832,9 +830,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            if (!item.getItemType().equals("rulestats")) {
-                                indexRequest.setRefreshPolicy(refreshPolicyOnSave);
-                            }
+                            indexRequest.setRefreshPolicy(getRefreshPolicy(operationPolicy));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
@@ -2194,6 +2190,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getMonthlyIndexPart(Date date) {
         String d = new SimpleDateFormat("yyyy-MM").format(date);
         return INDEX_DATE_PREFIX + d;
+    }
+
+    private WriteRequest.RefreshPolicy getRefreshPolicy(PersistencePolicy policy) {
+        if (policy.equals(PersistencePolicy.FORCE_READINESS)) {
+            return WriteRequest.RefreshPolicy.IMMEDIATE;
+        }
+        if (policy.equals(PersistencePolicy.BLOCK_UNTIL_READY)) {
+            return WriteRequest.RefreshPolicy.WAIT_UNTIL;
+        }
+        return WriteRequest.RefreshPolicy.NONE;
     }
 
 }

@@ -32,7 +32,6 @@
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
-            <cm:property name="refreshPolicyOnSave" value="false"/>
             <cm:property name="index.prefix" value="context"/>
             <cm:property name="mappingOverride" value="false"/>
             <cm:property name="numberOfShards" value="5"/>
@@ -110,7 +109,6 @@
         <property name="indexMappingTotalFieldsLimit" value="${es.indexMappingTotalFieldsLimit}"/>
         <property name="indexMaxDocValueFieldsSearch" value="${es.indexMaxDocValueFieldsSearch}"/>
         <property name="elasticSearchAddresses" value="${es.elasticSearchAddresses}"/>
-        <property name="refreshPolicyOnSave" value="${es.refreshPolicyOnSave}"/>
         <property name="fatalIllegalStateErrors" value="${es.fatalIllegalStateErrors}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
         <property name="itemsMonthlyIndexedOverride" value="${es.monthlyIndex.itemsMonthlyIndexedOverride}" />

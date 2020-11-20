@@ -111,6 +111,18 @@ public interface PersistenceService {
     boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
 
     /**
+     * Persists the specified Item in the context server.
+     *
+     * @param item the item to persist
+     * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
+     *                 the call to this method and the actual saving in the persistence backend
+     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
+     * @param policy the policy of the operation
+     *
+     * @return {@code true} if the item was properly persisted, {@code false} otherwise
+     */
+    boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite, PersistencePolicy policy);
+    /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
      * @param item     the item we want to update
