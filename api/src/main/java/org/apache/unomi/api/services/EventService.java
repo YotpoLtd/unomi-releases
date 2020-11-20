@@ -85,6 +85,8 @@ public interface EventService {
      */
     List<EventProperty> getEventProperties();
 
+    String getEventPersistencePolicy();
+
     /**
      * Retrieves the set of known event type identifiers.
      *

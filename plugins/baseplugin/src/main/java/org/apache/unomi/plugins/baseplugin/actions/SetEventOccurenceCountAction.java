@@ -40,12 +40,19 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     private PersistenceService persistenceService;
 
+    private EventService eventService;
+
+
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
     }
 
     @Override
@@ -103,7 +110,6 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             pastEvents = new LinkedHashMap<>();
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
-
         LocalDateTime fromDateTime = null;
         if (fromDate != null) {
             Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
@@ -115,10 +121,11 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
 
-        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
-
-        if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
-            count++;
+        if (eventService.getEventPersistencePolicy().equals("none")) {
+            LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
+            if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
+                count++;
+            }
         }
 
         pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);

@@ -104,6 +104,10 @@ public class EventServiceImpl implements EventService {
         this.eventPersistencePolicy = PersistencePolicy.get(eventPersistencePolicy);
     }
 
+    public String getEventPersistencePolicy() {
+        return eventPersistencePolicy.getPolicy();
+    }
+
     public void setRestrictedEventTypeIds(Set<String> restrictedEventTypeIds) {
         this.restrictedEventTypeIds = restrictedEventTypeIds;
     }
