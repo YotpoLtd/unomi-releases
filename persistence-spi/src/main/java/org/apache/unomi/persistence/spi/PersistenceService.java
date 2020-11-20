@@ -117,7 +117,7 @@ public interface PersistenceService {
      * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
      *                 the call to this method and the actual saving in the persistence backend
      * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
-     * @param policy the policy of the operation
+     * @param policy the policy of the persistence operation
      *
      * @return {@code true} if the item was properly persisted, {@code false} otherwise
      */
