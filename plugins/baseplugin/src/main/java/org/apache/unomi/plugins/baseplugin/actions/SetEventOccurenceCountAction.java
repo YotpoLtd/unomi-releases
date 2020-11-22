@@ -23,6 +23,7 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.persistence.spi.PersistencePolicy;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
 import java.time.Duration;
@@ -121,7 +122,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
 
-        if (eventService.getEventPersistencePolicy().equals("none")) {
+        if (eventService.getEventPersistencePolicy().equals(PersistencePolicy.NONE.getPolicy())) {
             LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
             if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
                 count++;
