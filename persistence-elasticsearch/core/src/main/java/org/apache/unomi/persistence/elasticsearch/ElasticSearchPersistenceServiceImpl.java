@@ -925,7 +925,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 long batchRequestStartTime = System.currentTimeMillis();
                 BulkResponse bulkResponse = client.bulk(bulkRequest, requestOptions);
-                logger.info("{} profiles updated with bulk segment in {}ms. timeTookByElastic={}", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime, bulkResponse.getTook().toString());
+                logger.info("{} profiles updated with bulk segment in {}ms. timeTook ByElastic={} ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime, bulkResponse.getTook().getMillis());
 
                 if (errorHandlerCallback != null){
                     List<String> failedIds = new ArrayList<>();
