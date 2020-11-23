@@ -916,15 +916,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean updateBatch(final Map<Item, Map> items, final Date dateHint, final Class clazz, Consumer<List<String>> errorHandlerCallback) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
-                long batchRequestStartTime = System.currentTimeMillis();
+
                 BulkRequest bulkRequest = new BulkRequest();
                 items.forEach((item, source) -> {
                     UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
                     bulkRequest.add(updateRequest);
                 });
 
+                long batchRequestStartTime = System.currentTimeMillis();
                 BulkResponse bulkResponse = client.bulk(bulkRequest, requestOptions);
-                logger.info("{} profiles updated with bulk segment in {}ms. timeTookByElastic={}", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime, bulkResponse.getTook());
+                logger.info("{} profiles updated with bulk segment in {}ms. timeTookByElastic={}", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime, bulkResponse.getTook().toString());
 
                 if (errorHandlerCallback != null){
                     List<String> failedIds = new ArrayList<>();
