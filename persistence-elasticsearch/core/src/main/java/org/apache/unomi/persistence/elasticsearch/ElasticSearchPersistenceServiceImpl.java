@@ -17,12 +17,15 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -36,7 +39,6 @@ import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.elasticsearch.conditions.*;
-import org.apache.unomi.persistence.spi.PersistencePolicy;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.ElasticsearchStatusException;
@@ -118,6 +120,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -194,7 +197,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
     private Integer clientSocketTimeout = null;
-
+    private Map<String, WriteRequest.RefreshPolicy> itemTypeToRefreshPolicy = new HashMap<>();
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -212,6 +215,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         elasticSearchAddressList.clear();
         for (String elasticSearchAddress : elasticSearchAddressesArray) {
             elasticSearchAddressList.add(elasticSearchAddress.trim());
+        }
+    }
+
+    public void setItemTypeToRefreshPolicy(String itemTypeToRefreshPolicy) throws IOException {
+        if (!itemTypeToRefreshPolicy.isEmpty()) {
+            this.itemTypeToRefreshPolicy = new ObjectMapper().readValue(itemTypeToRefreshPolicy,
+                        new TypeReference<HashMap<String, WriteRequest.RefreshPolicy>>() {});
         }
     }
 
@@ -779,6 +789,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public boolean isConsistent(Item item) {
+        return getRefreshPolicy(item.getItemType()) != WriteRequest.RefreshPolicy.NONE;
+    }
+
+    @Override
     public boolean save(final Item item) {
         return save(item, useBatchingForSave, alwaysOverwrite);
     }
@@ -790,12 +805,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
-        return save(item, useBatchingOption, alwaysOverwriteOption, PersistencePolicy.NONE);
-    }
-
-    @Override
-    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption,
-                        PersistencePolicy operationPolicy) {
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
@@ -830,7 +839,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            indexRequest.setRefreshPolicy(getRefreshPolicy(operationPolicy));
+                            indexRequest.setRefreshPolicy(getRefreshPolicy(item.getItemType()));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
@@ -869,19 +878,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
-                    updateRequest.doc(source);
-
-                    if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            updateRequest.setIfSeqNo(seqNo);
-                            updateRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                    }
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
@@ -901,6 +898,54 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return result;
         }
     }
+
+    private UpdateRequest createUpdateRequest(Class clazz, Date dateHint, Item item, Map source, boolean alwaysOverwrite) {
+        String itemType = Item.getItemType(clazz);
+        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+        updateRequest.doc(source);
+
+        if (!alwaysOverwrite) {
+            Long seqNo = (Long) item.getMetadata(SEQ_NO);
+            Long primaryTerm = (Long) item.getMetadata(PRIMARY_TERM);
+
+            if (seqNo != null && primaryTerm != null) {
+                updateRequest.setIfSeqNo(seqNo);
+                updateRequest.setIfPrimaryTerm(primaryTerm);
+            }
+        }
+        return updateRequest;
+    }
+
+    @Override
+    public List<String> update(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected List<String> execute(Object... args) throws Exception {
+                long batchRequestStartTime = System.currentTimeMillis();
+
+                BulkRequest bulkRequest = new BulkRequest();
+                items.forEach((item, source) -> {
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
+                    bulkRequest.add(updateRequest);
+                });
+
+                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+
+                List<String> failedItemsIds = new ArrayList<>();
+
+                if (bulkResponse.hasFailures()){
+                    Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
+                    iterator.forEachRemaining(bulkItemResponse -> {
+                        failedItemsIds.add(bulkItemResponse.getId());
+                    });
+                }
+                return failedItemsIds;
+            }
+        }.catchingExecuteInClassLoader(true);
+
+        return result;
+    }
+
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
@@ -2192,12 +2237,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return INDEX_DATE_PREFIX + d;
     }
 
-    private WriteRequest.RefreshPolicy getRefreshPolicy(PersistencePolicy policy) {
-        if (policy.equals(PersistencePolicy.FORCE_READINESS)) {
-            return WriteRequest.RefreshPolicy.IMMEDIATE;
-        }
-        if (policy.equals(PersistencePolicy.BLOCK_UNTIL_READY)) {
-            return WriteRequest.RefreshPolicy.WAIT_UNTIL;
+    private WriteRequest.RefreshPolicy getRefreshPolicy(String itemType) {
+        if (itemTypeToRefreshPolicy.containsKey(itemType)) {
+            return itemTypeToRefreshPolicy.get(itemType);
         }
         return WriteRequest.RefreshPolicy.NONE;
     }

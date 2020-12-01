@@ -25,6 +25,7 @@ import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * A service to provide persistence and retrieval of context server entities.
@@ -80,6 +81,14 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
 
     /**
+     * Return true if the item which is saved in the persistence service is consistent
+     *
+     * @param item the item to the check if consistent
+     * @return {@code true} if the item is consistent, false otherwise
+     */
+    boolean isConsistent(Item item);
+
+    /**
      * Persists the specified Item in the context server.
      *
      * @param item the item to persist
@@ -110,18 +119,6 @@ public interface PersistenceService {
      */
     boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
 
-    /**
-     * Persists the specified Item in the context server.
-     *
-     * @param item the item to persist
-     * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
-     *                 the call to this method and the actual saving in the persistence backend
-     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
-     * @param policy the policy of the persistence operation
-     *
-     * @return {@code true} if the item was properly persisted, {@code false} otherwise
-     */
-    boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite, PersistencePolicy policy);
     /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
@@ -157,6 +154,17 @@ public interface PersistenceService {
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
     boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> source, final boolean alwaysOverwrite);
+
+    /**
+     * Updates Map of items of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
+     * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     *
+     * @param items         A map the consist of item (key) and properties to update (value)
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @return List of failed Items Ids, if all succesful then returns an empty list. if the whole operation failed then will return null
+     */
+    List<String> update(Map<Item, Map> items, Date dateHint, Class clazz);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as

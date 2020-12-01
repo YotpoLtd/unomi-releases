@@ -30,7 +30,6 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.persistence.spi.PersistencePolicy;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.BundleContext;
@@ -58,8 +57,6 @@ public class EventServiceImpl implements EventService {
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
-
-    private PersistencePolicy eventPersistencePolicy;
 
     public void init() {
         logger.info("Event service initialized.");
@@ -98,14 +95,6 @@ public class EventServiceImpl implements EventService {
 
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
-    }
-
-    public void setEventPersistencePolicy(String eventPersistencePolicy) {
-        this.eventPersistencePolicy = PersistencePolicy.get(eventPersistencePolicy);
-    }
-
-    public String getEventPersistencePolicy() {
-        return eventPersistencePolicy.getPolicy();
     }
 
     public void setRestrictedEventTypeIds(Set<String> restrictedEventTypeIds) {
@@ -162,7 +151,7 @@ public class EventServiceImpl implements EventService {
 
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            saveSucceeded = persistenceService.save(event, null, true, eventPersistencePolicy);
+            saveSucceeded = persistenceService.save(event, null, true);
         }
 
         int changes;

@@ -29,7 +29,6 @@
             <cm:property name="profile.purge.inactiveTime" value="180"/>
             <cm:property name="profile.purge.existTime" value="-1"/>
             <cm:property name="event.purge.existTime" value="12"/>
-            <cm:property name="event.persistence.policy" value="none"/>
             <cm:property name="segment.update.batchSize" value="1000"/>
             <cm:property name="profile.forceRefreshOnSave" value="false"/>
             <cm:property name="definitions.refresh.interval" value="10000"/>
@@ -38,6 +37,8 @@
             <cm:property name="segment.max.retries.update.profile.segment" value="0"/>
             <cm:property name="segment.retry.update.segment.seconds.delay" value="1"/>
             <cm:property name="segment.recalculate.period" value="1"/>
+            <cm:property name="segment.batch.update" value="false"/>
+            <cm:property name="segment.send.profile.update.event" value="true"/>
             <cm:property name="rules.refresh.interval" value="1000"/>
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
         </cm:default-properties>
@@ -99,7 +100,6 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="eventPersistencePolicy" value="${services.event.persistence.policy}"/>
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>
@@ -177,6 +177,8 @@
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
         <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}" />
         <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}" />
+        <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}" />
+        <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}" />
         <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}" />
         <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}" />
 

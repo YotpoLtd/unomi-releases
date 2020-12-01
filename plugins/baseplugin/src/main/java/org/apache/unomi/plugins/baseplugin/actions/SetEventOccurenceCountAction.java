@@ -23,7 +23,6 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.persistence.spi.PersistencePolicy;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
 import java.time.Duration;
@@ -41,19 +40,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
     private PersistenceService persistenceService;
 
-    private EventService eventService;
-
-
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
     }
 
     @Override
@@ -111,6 +103,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             pastEvents = new LinkedHashMap<>();
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
+
         LocalDateTime fromDateTime = null;
         if (fromDate != null) {
             Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
@@ -122,8 +115,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
 
-        if (eventService.getEventPersistencePolicy().equals(PersistencePolicy.NONE.getPolicy())) {
-            LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
+        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
+
+        if (!persistenceService.isConsistent(event)) {
             if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
                 count++;
             }
