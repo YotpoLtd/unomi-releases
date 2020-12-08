@@ -68,7 +68,14 @@ public class PropertyHelper {
                 propertyName = resolver.remove(propertyName);
                 target = v;
             }
-
+            if (setPropertyStrategy != null && setPropertyStrategy.equals("removeValue")) {
+                Object currentValue = PropertyUtils.getProperty(target, propertyName);
+                if (currentValue != null && currentValue instanceof List) {
+                    ((List)currentValue).remove(propertyValue);
+                    BeanUtils.setProperty(target, propertyName, currentValue);
+                    return true;
+                }
+            }
             if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
                 Object previousValue = PropertyUtils.getProperty(target, propertyName);
                 List<Object> values = new ArrayList<>();
