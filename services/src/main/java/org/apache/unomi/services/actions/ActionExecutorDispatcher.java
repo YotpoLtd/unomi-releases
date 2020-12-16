@@ -23,10 +23,12 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.common.SecureFilteringClassLoader;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
+import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.mvel2.MVEL;
 import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
@@ -140,6 +142,10 @@ public class ActionExecutorDispatcher {
                 }
             } else if (value instanceof Map) {
                 value = parseMap(event, (Map<String, Object>) value);
+            } else if (value instanceof Condition) {
+                Map context = new HashMap();
+                context.put("event", event);
+                value = ConditionContextHelper.getContextualCondition(((Condition) value), context);
             }
             values.put(entry.getKey(), value);
         }
@@ -157,6 +163,10 @@ public class ActionExecutorDispatcher {
                 }
             } else if (value instanceof Map) {
                 if (hasContextualParameter((Map<String, Object>) value)) {
+                    return true;
+                }
+            } else if (value instanceof Condition) {
+                if (hasContextualParameter(((Condition) value).getParameterValues())) {
                     return true;
                 }
             }

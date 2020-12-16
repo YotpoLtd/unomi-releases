@@ -100,6 +100,9 @@ public class ConditionContextHelper {
                 }
             }
             return values;
+        } else if (value instanceof Condition) {
+            Map parameterValues = (Map) parseParameter(context, ((Condition)value).getParameterValues());
+            ((Condition) value).setParameterValues(parameterValues);
         }
         return value;
     }
@@ -137,6 +140,11 @@ public class ConditionContextHelper {
                     return true;
                 }
             }
+        } else if (value instanceof Condition) {
+            if (hasContextualParameter(((Condition)value).getParameterValues())) {
+                return true;
+            }
+
         }
         return false;
     }
