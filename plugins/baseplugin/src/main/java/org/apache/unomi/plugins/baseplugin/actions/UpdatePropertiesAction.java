@@ -37,6 +37,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
     public static final String PROPS_TO_ADD = "add";
     public static final String PROPS_TO_UPDATE = "update";
     public static final String PROPS_TO_DELETE = "delete";
+    public static final String PROPS_TO_INSERT = "insert";
 
     public static final String TARGET_ID_KEY = "targetId";
     public static final String TARGET_TYPE_KEY = "targetType";
@@ -74,6 +75,11 @@ public class UpdatePropertiesAction implements ActionExecutor {
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
         if (propsToUpdate != null) {
             isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet");
+        }
+
+        Map<String, Object> propsToInsert = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_INSERT);
+        if (propsToInsert != null) {
+            isProfileOrPersonaUpdated |= processProperties(target, propsToInsert, "addValues");
         }
 
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
