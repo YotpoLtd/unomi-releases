@@ -46,6 +46,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private PrivacyService privacyService;
     private ConfigSharingService configSharingService;
 
+    private int maxProfilesInOneMerge = -1;
+
     public int execute(Action action, Event event) {
         String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
         String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
@@ -266,6 +268,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
+    }
+
+    public void setMaxProfilesInOneMerge(String maxProfilesInOneMerge) {
+        this.maxProfilesInOneMerge = Integer.parseInt(maxProfilesInOneMerge);
     }
 
 }
