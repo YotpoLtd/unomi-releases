@@ -154,6 +154,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
+        Object expectedValueBoolean = condition.getParameter("propertyValueBoolean");
 
         Object actualValue;
         if (item instanceof Event && "eventType".equals(name)) {
@@ -184,11 +185,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
 
         return isMatch(op, actualValue, expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate,
-                expectedValueDateExpr, condition);
+                expectedValueDateExpr, expectedValueBoolean, condition);
     }
 
     protected boolean isMatch(String op, Object actualValue, String expectedValue, Object expectedValueInteger, Object expectedValueDouble,
-                            Object expectedValueDate, Object expectedValueDateExpr, Condition condition) {
+                            Object expectedValueDate, Object expectedValueDateExpr, Object expectedValueBoolean, Condition condition) {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
@@ -210,8 +211,14 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 }
                 return false;
             }
+            if (expectedValueBoolean != null) {
+                return expectedValueBoolean == actualValue;
+            }
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) == 0;
         } else if (op.equals("notEquals")) {
+            if (expectedValueBoolean != null) {
+                return expectedValueBoolean != actualValue;
+            }
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) != 0;
         } else if (op.equals("greaterThan")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) > 0;
@@ -280,6 +287,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             Event event = (Event) item;
             if (expression.startsWith("properties.")) {
                 return getNestedPropertyValue(expression.substring("properties.".length()), event.getProperties());
+            }
+            if (expression.equals("persistent")) {
+                return event.isPersistent();
             }
             if ("target.itemId".equals(expression)) {
                 return event.getTarget().getItemId();
