@@ -330,6 +330,14 @@
 
     <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="appendPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.AppendPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.apache.unomi.services.mergers.MostRecentPropertyMergeStrategyExecutor">
