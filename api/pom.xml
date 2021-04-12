@@ -41,13 +41,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/io.projectreactor/reactor-core -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
             <version>${reactor.version}</version>
         </dependency>
-    </dependencies>
+            </dependencies>
 
     <reporting>
         <plugins>
@@ -97,12 +96,24 @@
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Private-Package>
+                            io.micrometer.*,
+                            io.micrometer.core.instrument.*
+                            kotlin.*,
+                            reactor.blockhound.*,
+                            org.reactivestreams.*
+                        </Private-Package>
                         <Import-Package>
                             org.jvnet.staxex;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             javax.activation;resolution:=optional,
                             com.sun.xml.*;resolution:=optional,
+                            !io.micrometer.*,
+                            !kotlin.*,
+                            !reactor.blockhound.*,
+                            !org.reactivestreams.*,
                             *
+
                         </Import-Package>
                     </instructions>
                 </configuration>

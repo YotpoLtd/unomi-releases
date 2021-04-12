@@ -96,6 +96,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>${reactor.version}</version>
+            <scope>provided</scope>
+        </dependency>
         <!--<dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-core</artifactId>
@@ -391,6 +397,7 @@
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Private-Package>io.micrometer.core.instrument.*</Private-Package>
                         <Import-Package>
                             org.jvnet.staxex;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,

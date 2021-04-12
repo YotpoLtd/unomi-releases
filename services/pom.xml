@@ -165,7 +165,11 @@
             <version>1.6.6</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>${reactor.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -177,8 +181,31 @@
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Private-Package>
+                            io.micrometer.*,
+                            kotlin.*,
+
+                        </Private-Package>
                         <Import-Package>
                             sun.misc;resolution:=optional,
+                            !io.micrometer.*,
+                            !kotlin.*,
+                            <!--!io.micrometer.*,
+                            !kotlin.*,-->
+                            <!--reactor.blockhound.*;resolution:=optional,
+                            javax.annotation.*;resolution:=optional,
+                            ch.qos.logback.*;resolution:=optional,
+                            com.github.benmanes.caffeine.cache.*;resolution:=optional,
+                            com.mongodb.*;resolution:=optional,
+                            com.netflix.hystrix.*;resolution:=optional,
+                            com.sun.management.*;resolution:=optional,
+                            io.netty.handler.codec.http.*;resolution:=optional,
+                            javax.persistence.*;resolution:=optional,
+                            net.sf.ehcache.*;resolution:=optional,
+                            okhttp3.*;resolution:=optional,
+                            org.HdrHistogram.*;resolution:=optional,
+                            org.LatencyUtils.*;resolution:=optional,
+                            org.apache.catalina.*;resolution:=optional,-->
                             *
                         </Import-Package>
                     </instructions>
