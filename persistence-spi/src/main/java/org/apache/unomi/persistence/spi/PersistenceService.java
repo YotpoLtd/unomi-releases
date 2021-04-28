@@ -187,7 +187,7 @@ public interface PersistenceService {
      * @param scripts       inline scripts array
      * @param scriptParams  script params array
      * @param conditions    conditions array
-     * @return Updated profiles quantity, -1 if update failed.
+     * @return {@code true} if the update was successful, {@code false} otherwise
      */
     Boolean updateWithQueryAndScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
 
@@ -201,6 +201,7 @@ public interface PersistenceService {
      * @param scriptParams  script params array
      * @param conditions    conditions array
      * @param numberOfVersionConflictsRetries how many retries on version-conflict
+     * @param secondsDelayForRetryUpdate how many seconds to wait between retries
      * @return Updated profiles quantity, -1 if update failed.
      */
     Long updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
