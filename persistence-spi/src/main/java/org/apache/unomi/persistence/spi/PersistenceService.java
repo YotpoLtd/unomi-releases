@@ -25,7 +25,6 @@ import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * A service to provide persistence and retrieval of context server entities.
@@ -190,7 +189,24 @@ public interface PersistenceService {
      * @param conditions    conditions array
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean updateWithQueryAndScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+    Boolean updateWithQueryAndScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+
+    /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name
+     * based on provided scripts and script parameters
+     *
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @param scripts       inline scripts array
+     * @param scriptParams  script params array
+     * @param conditions    conditions array
+     * @param numberOfVersionConflictsRetries how many retries on version-conflict
+     * @param secondsDelayForRetryUpdate how many seconds to wait between retries
+     * @return Updated profiles quantity, -1 if update failed.
+     */
+    Long updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
+                                                   final Map<String, Object>[] scriptParams, final Condition[] conditions,
+                                                   int numberOfVersionConflictsRetries, long secondsDelayForRetryUpdate);
 
     /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
@@ -212,6 +228,17 @@ public interface PersistenceService {
      * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
      */
     <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);
+
+    /**
+     *
+     * @param dateHint a Date helping in identifying where the item is located
+     * @param clazz    the {@link Item} subclass of the item we want to retrieve
+     * @param itemId   the identifier of the item we want to retrieve
+     * @param <T>      the type of the Item subclass we want to retrieve
+     * @return A list of Items identified with the specified identifiers and with the specified Item subclass if exist, empty {@link List} otherwise
+     */
+    <T extends Item> List<T> load(Date dateHint, Class<T> clazz, String... itemId);
+
 
     /**
      * Deletes the item identified with the specified identifier and with the specified Item subclass if it exists.

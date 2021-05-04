@@ -20,6 +20,8 @@ package org.apache.unomi.persistence.elasticsearch;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.HazelcastInstance;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -48,8 +50,7 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.*;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.ClearScrollRequest;
@@ -117,8 +118,11 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -735,39 +739,50 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return load(itemId, null, clazz);
     }
 
-    @Override
-    public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
-        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem",  this.bundleContext, this.fatalIllegalStateErrors) {
-            protected T execute(Object... args) throws Exception {
+
+    public <T extends Item> List<T> load(final Date dateHint, final Class<T> clazz, final String... itemIds) {
+        return new InClassLoaderExecute<List<T>>(metricsService, this.getClass().getName() + ".loadItems",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected List<T> execute(Object... args) throws Exception {
+                List<T> matchedItemsList = new ArrayList<>();
+                String itemId = null;
                 try {
                     String itemType = Item.getItemType(clazz);
-                    T itemFromCache = getFromCache(itemId, clazz);
-                    if (itemFromCache != null) {
-                        return itemFromCache;
-                    }
-
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
-                        return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
+                        return new MetricAdapter<List<T>>(metricsService, ".loadItemWithQuery") {
                             @Override
-                            public T execute(Object... args) throws Exception {
-                                PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null, false);
-                                if (r.size() > 0) {
-                                    return r.get(0);
-                                }
-                                return null;
+                            public List<T> execute(Object... args) throws Exception {
+                                PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemIds), null, clazz, 0, -1, null, null, false);
+                                return r.getList();
                             }
                         }.execute();
                     } else {
-                        GetRequest getRequest = new GetRequest(getIndex(itemType, dateHint), itemId);
-                        GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
-                        if (response.isExists()) {
-                            String sourceAsString = response.getSourceAsString();
-                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
-                            putInCache(itemId, value);
-                            return value;
-                        } else {
-                            return null;
+                        MultiGetRequest mgetRequest = new MultiGetRequest();
+                        String index = getIndex(itemType, dateHint);
+                        for (String id: itemIds) {
+                            T itemFromCache = getFromCache(id, clazz);
+                            if (itemFromCache != null) {
+                                matchedItemsList.add(itemFromCache);
+                            }
+                            else {
+                                mgetRequest.add(new MultiGetRequest.Item(index, id));
+                            }
+                        }
+                        MultiGetResponse multiResponse = client.mget(mgetRequest, RequestOptions.DEFAULT);
+                        MultiGetItemResponse[] itemsResponse = multiResponse.getResponses();
+                        for(int responseIndex = 0; responseIndex < itemsResponse.length; ++responseIndex) {
+                            MultiGetItemResponse itemResponse = multiResponse.getResponses()[responseIndex];
+                            GetResponse response = itemResponse.getResponse();
+                            itemId = response.getId();
+                            if (response.isExists()) {
+                                String sourceAsString = response.getSourceAsString();
+                                final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                                setMetadata(value, itemId, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
+                                putInCache(itemId, value);
+                                matchedItemsList.add(value);
+                            } else {
+                                logger.warn("Could not find document with itemId {}, in index {}", itemId, index);
+                            }
+
                         }
                     }
                 } catch (ElasticsearchStatusException ese) {
@@ -782,9 +797,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 } catch (Exception ex) {
                     throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ex);
                 }
+                return matchedItemsList;
             }
         }.catchingExecuteInClassLoader(true);
 
+    }
+
+    @Override
+    public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
+        List<T> itemList = load(dateHint, clazz, itemId);
+        return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
     }
 
     private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm) {
@@ -956,16 +978,24 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return result;
     }
 
+    @Override
+    public Boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
+                                                          final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+        return updateWithQueryAndScript(dateHint, clazz, scripts, scriptParams, conditions, 0, 0) != -1;
+    }
 
     @Override
-    public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript",  this.bundleContext, this.fatalIllegalStateErrors) {
-            protected Boolean execute(Object... args) throws Exception {
+    public Long updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
+                                                          final Map<String, Object>[] scriptParams, final Condition[] conditions,
+                                                          int numberOfRetries, long secondsDelayForRetryUpdate) {
+
+        Long result = new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected Long execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
 
                     String index = getIndex(itemType, dateHint);
-
+                    long entitiesUpdated = 0;
                     for (int i = 0; i < scripts.length; i++) {
                         Script actualScript = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
 
@@ -979,26 +1009,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setScript(actualScript);
                         updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
 
-                        BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-
-                        if (response.getBulkFailures().size() > 0) {
-                            for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
-                                logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
-                            }
-                        } else {
-                            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
-                        }
-                        if (response.isTimedOut()) {
-                            logger.error("Update with query and script ended with timeout!");
-                        }
-                        if (response.getVersionConflicts() > 0) {
-                            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
-                        }
-                        if (response.getNoops() > 0) {
-                            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
+                        BulkByScrollResponse response = executeUpdateWithScriptAndQuery(updateByQueryRequest);
+                        entitiesUpdated += response.getUpdated();
+                        if (numberOfRetries > 0 && containsRetryableErrors(response)) {
+                            entitiesUpdated += retryUpdateByQuery(updateByQueryRequest, secondsDelayForRetryUpdate, numberOfRetries);
                         }
                     }
-                    return true;
+                    return entitiesUpdated;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName(), e);
                 } catch (ScriptException e) {
@@ -1007,11 +1024,54 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
+        return Optional.ofNullable(result)
+                .orElse(-1L);
+    }
+
+    private boolean containsRetryableErrors(BulkByScrollResponse response) {
+        return response.getVersionConflicts() > 0
+                || !response.getBulkFailures().isEmpty()
+                || !response.getSearchFailures().isEmpty();
+    }
+
+    private Long retryUpdateByQuery(UpdateByQueryRequest updateByQueryRequest, long secondsDelayBetweenRetries, int numberOfRetries) {
+        RetryPolicy<Long> retryPolicy = new RetryPolicy<Long>()
+                .withDelay(Duration.ofSeconds(secondsDelayBetweenRetries))
+                .withMaxRetries(numberOfRetries);
+
+        AtomicLong updated = new AtomicLong();
+        return Failsafe.with(retryPolicy)
+            .get(executionContext -> {
+                logger.warn("Retrying update execution ({} out of {})", executionContext.getAttemptCount(), numberOfRetries);
+                BulkByScrollResponse response = executeUpdateWithScriptAndQuery(updateByQueryRequest);
+                updated.addAndGet(response.getUpdated());
+                if (containsRetryableErrors(response)) {
+                    throw new RuntimeException("Retry failed");
+                }
+                return updated.get();
+            });
+    }
+
+    private BulkByScrollResponse executeUpdateWithScriptAndQuery(UpdateByQueryRequest updateByQueryRequest) throws IOException {
+        BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+        if (response.getBulkFailures().size() > 0) {
+            for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
+                logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
+            }
         } else {
-            return result;
+            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
         }
+        if (response.isTimedOut()) {
+            logger.error("Update with query and script ended with timeout!");
+        }
+        if (response.getVersionConflicts() > 0) {
+            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
+        }
+        if (response.getNoops() > 0) {
+            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
+        }
+
+        return response;
     }
 
     @Override
