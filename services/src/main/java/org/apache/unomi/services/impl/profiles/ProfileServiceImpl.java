@@ -388,7 +388,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
-                return persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
+                return persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit(), query.getScrollTimeValidity(), query.getTrackTotalHits());
             }
         } else {
             if (StringUtils.isNotBlank(query.getText())) {

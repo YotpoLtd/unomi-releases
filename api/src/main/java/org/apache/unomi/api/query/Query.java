@@ -35,6 +35,7 @@ public class Query implements Serializable {
     private boolean forceRefresh;
     private String scrollTimeValidity;
     private String scrollIdentifier;
+    private boolean trackTotalHits;
 
     /**
      * Instantiates a new Query.
@@ -169,4 +170,20 @@ public class Query implements Serializable {
         this.scrollTimeValidity = scrollTimeValidity;
     }
 
+    /**
+     * Retrieves the boolean value that allows you to control how the total number of query result hits should be tracked.
+     *
+     * @return the {Boolean} parameter value
+     */
+    public boolean getTrackTotalHits() {
+        return this.trackTotalHits;
+    }
+
+    /**
+     * Sets the boolean value that allows you to control how the total number of query result hits should be tracked.
+     *
+     */
+    public void setTrackTotalHits(boolean trackTotalHits) {
+        this.trackTotalHits = trackTotalHits;
+    }
 }
