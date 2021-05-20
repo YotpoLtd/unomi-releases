@@ -38,6 +38,7 @@ public class Segment extends MetadataItem {
     public static final String ITEM_TYPE = "segment";
     private static final long serialVersionUID = -1384533444860961296L;
     private Condition condition;
+    private EvaluationStatus status = EvaluationStatus.DONE;
 
     /**
      * Instantiates a new Segment.
@@ -72,4 +73,18 @@ public class Segment extends MetadataItem {
         this.condition = condition;
     }
 
+    public EvaluationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EvaluationStatus status) {
+        this.status = status;
+    }
+
+    public enum EvaluationStatus {
+        IN_PROGRESS_USER,
+        IN_PROGRESS_SYSTEM,
+        FAILED,
+        DONE;
+    }
 }
