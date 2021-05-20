@@ -148,20 +148,25 @@ public class ActionExecutorDispatcher {
 
     @SuppressWarnings("unchecked")
     private boolean hasContextualParameter(Map<String, Object> values) {
-        for (Map.Entry<String, Object> entry : values.entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                String s = (String) value;
-                if (s.contains(VALUE_NAME_SEPARATOR) && valueExtractors.containsKey(StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR))) {
-                    return true;
-                }
-            } else if (value instanceof Map) {
-                if (hasContextualParameter((Map<String, Object>) value)) {
-                    return true;
+        try {
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                Object value = entry.getValue();
+                if (value instanceof String) {
+                    String s = (String) value;
+                    if (s.contains(VALUE_NAME_SEPARATOR) && valueExtractors.containsKey(StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR))) {
+                        return true;
+                    }
+                } else if (value instanceof Map) {
+                    if (hasContextualParameter((Map<String, Object>) value)) {
+                        return true;
+                    }
                 }
             }
+            return false;
+        } catch (Exception e) {
+            logger.info("values are:" + values);
+            throw e;
         }
-        return false;
     }
 
     public int execute(Action action, Event event) {
