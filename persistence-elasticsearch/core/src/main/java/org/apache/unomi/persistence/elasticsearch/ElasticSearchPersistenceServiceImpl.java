@@ -786,7 +786,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 putInCache(itemId, value);
                                 matchedItemsList.add(value);
                             } else {
-                                logger.warn("Could not find document with itemId {}, in index {}", itemId, index);
+                     //           logger.warn("Could not find document with itemId {}, in index {}", itemId, index);
                             }
 
                         }
