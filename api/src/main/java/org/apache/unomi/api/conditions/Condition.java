@@ -53,7 +53,6 @@ public class Condition implements Serializable {
      *
      * @return the condition type
      */
-    @XmlTransient
     public ConditionType getConditionType() {
         return conditionType;
     }

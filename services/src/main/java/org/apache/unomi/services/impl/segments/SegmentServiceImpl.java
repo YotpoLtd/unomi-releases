@@ -501,33 +501,46 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
+
+        String store = (String) profile.getProperty("storeId");
+        Condition c = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        c.setParameter("propertyName", "condition.parameterValues.storeId");
+        c.setParameter("comparisonOperator", "equals");
+        c.setParameter("propertyValue", store);
+
+        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class, 0, 200, null).getList();
+
+
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
-
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
-            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+//
+//        List<Segment> allSegments = this.allSegments;
+        for (Segment segment : storeSegments) {
+            Condition c2 = segment.getCondition();
+            //c2.setConditionType(definitionsService.getConditionType("yotpoCondition"));
+            //definitionsService.resolveConditionType(c2);
+            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(c2, profile)) {
                 segments.add(segment.getMetadata().getId());
             }
         }
-
-        List<Scoring> allScoring = this.allScoring;
-        Map<String, Integer> scoreModifiers = (Map<String, Integer>) profile.getSystemProperties().get("scoreModifiers");
-        for (Scoring scoring : allScoring) {
-            if (scoring.getMetadata().isEnabled()) {
-                int score = 0;
-                for (ScoringElement scoringElement : scoring.getElements()) {
-                    if (persistenceService.testMatch(scoringElement.getCondition(), profile)) {
-                        score += scoringElement.getValue();
-                    }
-                }
-                String scoringId = scoring.getMetadata().getId();
-                if (scoreModifiers != null && scoreModifiers.containsKey(scoringId) && scoreModifiers.get(scoringId) != null) {
-                    score += scoreModifiers.get(scoringId);
-                }
-                scores.put(scoringId, score);
-            }
-        }
+//
+//        List<Scoring> allScoring = this.allScoring;
+//        Map<String, Integer> scoreModifiers = (Map<String, Integer>) profile.getSystemProperties().get("scoreModifiers");
+//        for (Scoring scoring : allScoring) {
+//            if (scoring.getMetadata().isEnabled()) {
+//                int score = 0;
+//                for (ScoringElement scoringElement : scoring.getElements()) {
+//                    if (persistenceService.testMatch(scoringElement.getCondition(), profile)) {
+//                        score += scoringElement.getValue();
+//                    }
+//                }
+//                String scoringId = scoring.getMetadata().getId();
+//                if (scoreModifiers != null && scoreModifiers.containsKey(scoringId) && scoreModifiers.get(scoringId) != null) {
+//                    score += scoreModifiers.get(scoringId);
+//                }
+//                scores.put(scoringId, score);
+//            }
+//        }
 
         return new SegmentsAndScores(segments, scores);
     }
@@ -1144,7 +1157,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, 1, TimeUnit.DAYS);
 
         task = new TimerTask() {
             @Override

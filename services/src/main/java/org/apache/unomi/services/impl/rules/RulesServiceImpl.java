@@ -271,10 +271,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changes |= actionExecutorDispatcher.execute(action, event);
             }
             long totalActionsTime = System.currentTimeMillis() - actionsStartTime;
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
-            ruleFired.getAttributes().putAll(event.getAttributes());
-            ruleFired.setPersistent(false);
-            changes |= eventService.send(ruleFired);
+//            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
+//            ruleFired.getAttributes().putAll(event.getAttributes());
+//            ruleFired.setPersistent(false);
+//            changes |= eventService.send(ruleFired);
 
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount()+1);

@@ -20,10 +20,15 @@ package org.apache.unomi.plugins.baseplugin.actions;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,6 +50,7 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
             return EventService.NO_CHANGE;
         }
         boolean updated = false;
+
         SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(event.getProfile());
         Set<String> segments = segmentsAndScoringForProfile.getSegments();
         if (!segments.equals(event.getProfile().getSegments())) {
@@ -56,6 +62,6 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
             event.getProfile().setScores(scores);
             updated = true;
         }
-        return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        return EventService.NO_CHANGE;
     }
 }

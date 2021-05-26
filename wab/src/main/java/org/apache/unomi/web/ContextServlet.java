@@ -239,20 +239,20 @@ public class ContextServlet extends HttpServlet {
                     }
                 }
 
-                if (profileCreated) {
-                    changes |= EventService.PROFILE_UPDATED;
-
-                    Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
-                    profileUpdated.setPersistent(false);
-                    profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                    profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
-                                " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(), timestamp);
-                    }
-                    changes |= eventService.send(profileUpdated);
-                }
+//                if (profileCreated) {
+//                    changes |= EventService.PROFILE_UPDATED;
+//
+//                    Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
+//                    profileUpdated.setPersistent(false);
+//                    profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+//                    profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+//
+//                    if (logger.isDebugEnabled()) {
+//                        logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
+//                                " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(), timestamp);
+//                    }
+//                    changes |= eventService.send(profileUpdated);
+//                }
             }
 
             ContextResponse contextResponse = new ContextResponse();
