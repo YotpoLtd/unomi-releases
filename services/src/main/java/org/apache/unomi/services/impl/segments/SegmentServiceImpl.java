@@ -990,7 +990,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         if (!saveSegmentEvalStatus) {
             throw new RuntimeException("Failed to persist segment evaluation status to " + segment.getStatus());
         }
-        persistenceService.refresh();
+        persistenceService.refresh(Segment.class);
     }
 
     private long updateProfilesSegmentByQuery(Condition profilesToUpdateCondition, String segmentId, boolean isAdd) {

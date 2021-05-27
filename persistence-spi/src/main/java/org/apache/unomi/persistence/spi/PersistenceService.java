@@ -616,6 +616,12 @@ public interface PersistenceService {
     void refresh();
 
     /**
+     * Updates the persistence's engine given indices if needed.
+     * @param indices indices to refresh
+     */
+    void refresh(Class...indices);
+
+    /**
      * Purges all data in the context server up to the specified date, not included.
      *
      * @param date the date (not included) before which we want to erase all data
