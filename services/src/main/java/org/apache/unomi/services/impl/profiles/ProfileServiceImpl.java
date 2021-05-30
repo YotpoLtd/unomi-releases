@@ -697,7 +697,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         if (masterProfileChanged) {
-            persistenceService.save(masterProfile);
+        //    persistenceService.save(masterProfile);
         }
 
         return masterProfile;
