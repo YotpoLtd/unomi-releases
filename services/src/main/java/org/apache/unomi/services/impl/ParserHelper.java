@@ -71,7 +71,7 @@ public class ParserHelper {
                         }
                     }
                 }
-                hookCondition(conditionHooks, condition);
+         //       hookCondition(conditionHooks, condition);
             }
         });
         return result.isEmpty();
