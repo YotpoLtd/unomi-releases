@@ -506,8 +506,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         List<Segment> allSegments = this.allSegments;
         for (Segment segment : allSegments) {
-            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
-                segments.add(segment.getMetadata().getId());
+            if (profile.getProperty("storeId") != null && profile.getProperty("storeId").equals(segment.getCondition().getParameter("storeId"))) {
+                if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+                    segments.add(segment.getMetadata().getId());
+                }
             }
         }
 
