@@ -501,15 +501,22 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
+        String store = (String) profile.getProperty("storeId");
+        Condition c = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        c.setParameter("propertyName", "condition.parameterValues.storeId");
+        c.setParameter("comparisonOperator", "equals");
+        c.setParameter("propertyValue", store);
+
+        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class, 0, 200, null).getList();
+
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
 
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
-            if (profile.getProperty("storeId") != null && profile.getProperty("storeId").equals(segment.getCondition().getParameter("storeId"))) {
-                if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
-                    segments.add(segment.getMetadata().getId());
-                }
+        for (Segment segment : storeSegments) {
+            Condition c2 = segment.getCondition();
+            definitionsService.resolveConditionType(c2);
+            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(c2, profile)) {
+                segments.add(segment.getMetadata().getId());
             }
         }
 
@@ -1146,7 +1153,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.DAYS);
 
         task = new TimerTask() {
             @Override
