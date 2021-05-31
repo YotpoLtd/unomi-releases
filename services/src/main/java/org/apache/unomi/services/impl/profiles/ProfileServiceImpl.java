@@ -623,7 +623,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
 
-        boolean masterProfileChanged = false;
+        //boolean masterProfileChanged = false;
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
@@ -653,7 +653,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 matchingPropertyMergeStrategyExecutors = bundleContext.getServiceReferences(PropertyMergeStrategyExecutor.class, propertyMergeStrategyType.getFilter());
                 for (ServiceReference<PropertyMergeStrategyExecutor> propertyMergeStrategyExecutorReference : matchingPropertyMergeStrategyExecutors) {
                     PropertyMergeStrategyExecutor propertyMergeStrategyExecutor = bundleContext.getService(propertyMergeStrategyExecutorReference);
-                    masterProfileChanged |= propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
+                    propertyMergeStrategyExecutor.mergeProperty(profileProperty, propertyType, profilesToMerge, masterProfile);
                 }
             } catch (InvalidSyntaxException e) {
                 logger.error("Error retrieving strategy implementation", e);
@@ -663,7 +663,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         // merge System properties
         for (Profile profile : profilesToMerge) {
-            masterProfileChanged = mergeSystemProperties(masterProfile.getSystemProperties(), profile.getSystemProperties()) || masterProfileChanged;
+            mergeSystemProperties(masterProfile.getSystemProperties(), profile.getSystemProperties());
         }
 
         // we now have to merge the profile's segments
@@ -671,7 +671,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             if (profile.getSegments() != null && profile.getSegments().size() > 0) {
                 masterProfile.getSegments().addAll(profile.getSegments());
                 // TODO better segments diff calculation
-                masterProfileChanged = true;
             }
         }
 
@@ -682,22 +681,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     if (masterProfile.getConsents().containsKey(consentId)) {
                         if (masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
                             masterProfile.getConsents().remove(consentId);
-                            masterProfileChanged = true;
                         } else if (masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
                             masterProfile.getConsents().replace(consentId, profile.getConsents().get(consentId));
-                            masterProfileChanged = true;
                         }
                     } else {
                         masterProfile.getConsents().put(consentId, profile.getConsents().get(consentId));
-                        masterProfileChanged = true;
                     }
 
                 }
             }
-        }
-
-        if (masterProfileChanged) {
-            persistenceService.save(masterProfile);
         }
 
         return masterProfile;
