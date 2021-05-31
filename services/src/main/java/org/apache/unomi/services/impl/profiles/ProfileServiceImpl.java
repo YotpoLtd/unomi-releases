@@ -623,7 +623,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
         logger.info("Merging profiles " + profileIdsToMerge + " into profile " + masterProfile.getItemId());
 
-        //boolean masterProfileChanged = false;
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
