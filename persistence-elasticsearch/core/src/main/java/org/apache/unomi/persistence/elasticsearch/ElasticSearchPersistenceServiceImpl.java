@@ -2063,13 +2063,26 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void refresh() {
+        refresh(null);
+    }
+
+    @Override
+    public void refresh(Class...classes) {
         new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) {
                 if (bulkProcessor != null) {
                     bulkProcessor.flush();
                 }
                 try {
-                    client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
+                    String[] resolvedIndices = classes == null ? null : Arrays.stream(classes)
+                            .map(cls -> {
+                                String itemType = Item.getItemType(cls);
+                                return getIndex(itemType, null);
+                            })
+                            .collect(Collectors.toList())
+                            .toArray(new String[0]);
+
+                    client.indices().refresh(Requests.refreshRequest(resolvedIndices), RequestOptions.DEFAULT);
                 } catch (IOException e) {
                     e.printStackTrace();//TODO manage ES7
                 }
