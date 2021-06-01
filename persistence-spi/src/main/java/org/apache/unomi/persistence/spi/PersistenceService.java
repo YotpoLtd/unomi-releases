@@ -22,6 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -686,4 +687,9 @@ public interface PersistenceService {
      */
     void purge(final String scope);
 
+    /**
+     * Check storage health status
+     * @Throws IOException in case of a problem
+     */
+    void runHealthCheck() throws IOException;
 }
