@@ -244,7 +244,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private List<Segment> getAllSegmentDefinitions() {
-        List<Segment> allItems = persistenceService.getAllItems(Segment.class);
+        // List<Segment> allItems = persistenceService.getAllItems(Segment.class);
+        List<Segment> allItems = new ArrayList<>();
         for (Segment segment : allItems) {
             definitionsService.resolveConditionType(segment.getCondition());
         }
