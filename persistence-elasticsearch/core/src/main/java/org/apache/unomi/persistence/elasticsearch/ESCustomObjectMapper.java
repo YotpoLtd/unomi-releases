@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
@@ -34,7 +35,7 @@ public class ESCustomObjectMapper extends CustomObjectMapper {
         super();
         this.addMixIn(Item.class, ESItemMixIn.class);
         this.addMixIn(Event.class, ESEventMixIn.class);
-        this.addMixIn(Segment.class, ESSegmentMixIn.class);
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public static ObjectMapper getObjectMapper() {
