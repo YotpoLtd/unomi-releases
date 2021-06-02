@@ -1134,7 +1134,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             @Override
             public void run() {
                 try {
-                    logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
+                    logger.info("TEST_VERSION_CHECK: running scheduled task to recalculate segments with pastEventCondition conditions");
                     long pastEventsTaskStartTime = System.currentTimeMillis();
                     for (Metadata metadata : rulesService.getRuleMetadatas()) {
                         Rule rule = rulesService.getRule(metadata.getId());
