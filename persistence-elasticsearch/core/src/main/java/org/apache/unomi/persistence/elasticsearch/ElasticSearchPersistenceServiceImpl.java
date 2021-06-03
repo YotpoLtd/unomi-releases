@@ -98,6 +98,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
@@ -741,8 +742,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return load(itemId, null, clazz);
     }
 
+    @Override
+    public <T extends Item> T load(final String itemId, final String[] includes, final String[] excludes, final Class<T> clazz) {
+        return load(itemId, null, includes, excludes, clazz);
+    }
 
-    public <T extends Item> List<T> load(final Date dateHint, final Class<T> clazz, final String... itemIds) {
+
+    public <T extends Item> List<T> load(final Date dateHint, final Class<T> clazz, final String[] includes, final String[] excludes, final String... itemIds) {
         return new InClassLoaderExecute<List<T>>(metricsService, this.getClass().getName() + ".loadItems",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected List<T> execute(Object... args) throws Exception {
                 List<T> matchedItemsList = new ArrayList<>();
@@ -758,6 +764,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }.execute();
                     } else {
+                        FetchSourceContext fetchSourceContext =
+                                new FetchSourceContext(true, includes, excludes);
                         MultiGetRequest mgetRequest = new MultiGetRequest();
                         String index = getIndex(itemType, dateHint);
                         for (String id: itemIds) {
@@ -766,7 +774,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 matchedItemsList.add(itemFromCache);
                             }
                             else {
-                                mgetRequest.add(new MultiGetRequest.Item(index, id));
+                                mgetRequest.add(new MultiGetRequest.Item(index, id).fetchSourceContext(fetchSourceContext));
                             }
                         }
                         MultiGetResponse multiResponse = client.mget(mgetRequest, RequestOptions.DEFAULT);
@@ -807,7 +815,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
-        List<T> itemList = load(dateHint, clazz, itemId);
+        List<T> itemList = load(dateHint, clazz,  null, null, itemId);
+        return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
+    }
+
+    @Override
+    public <T extends Item> T load(final String itemId, final Date dateHint, String[] includes, String[] excludes,  final Class<T> clazz) {
+        List<T> itemList = load(dateHint, clazz,  includes, excludes, itemId);
         return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
     }
 
