@@ -460,11 +460,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     bulkProcessor = getBulkProcessor();
                 }
 
-                logger.info("Waiting for GREEN cluster status...");
-
-                client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
-
-                logger.info("Cluster status is GREEN");
+                runHealthCheck();
 
                 return true;
             }
@@ -2179,6 +2175,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    @Override
+    public void runHealthCheck() throws IOException {
+        logger.info("Waiting for GREEN cluster status...");
+
+        client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
+
+        logger.info("Cluster status is GREEN");
     }
 
     @Override
