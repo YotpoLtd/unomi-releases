@@ -251,6 +251,19 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return allItems;
     }
 
+    public List<Segment> getStoreSegments(String storeId) {
+        Condition c = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        c.setParameter("propertyName", "condition.parameterValues.storeId");
+        c.setParameter("comparisonOperator", "equals");
+        c.setParameter("propertyValue", storeId);
+
+        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class);
+        for (Segment segment : storeSegments) {
+            definitionsService.resolveConditionType(segment.getCondition());
+        }
+        return storeSegments;
+    }
+
     public Segment getSegmentDefinition(String segmentId) {
         Segment definition = persistenceService.load(segmentId, Segment.class);
         if (definition != null) {
@@ -349,8 +362,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private Set<Segment> getSegmentDependentSegments(String segmentId) {
-        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
-        for (Segment segment : this.allSegments) {
+        Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
+        for (Segment segment : allSegments) {
             if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
                 impactedSegments.add(segment);
             }
@@ -505,9 +518,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
+        String store = (String) profile.getProperty("storeId");
 
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
+        List<Segment> storeSegments = store == null ? new ArrayList<>() : getStoreSegments(store);
+        for (Segment segment : storeSegments) {
             if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                 segments.add(segment.getMetadata().getId());
             }
@@ -535,16 +549,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public List<Metadata> getSegmentMetadatasForProfile(Profile profile) {
-        List<Metadata> metadatas = new ArrayList<>();
-
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
-            if (persistenceService.testMatch(segment.getCondition(), profile)) {
-                metadatas.add(segment.getMetadata());
-            }
-        }
-
-        return metadatas;
+        return null; // TODO: Delete me
     }
 
     public PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy) {
@@ -672,13 +677,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private Set<Segment> getScoringDependentSegments(String scoringId) {
-        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
-        for (Segment segment : this.allSegments) {
-            if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
-                impactedSegments.add(segment);
-            }
-        }
-        return impactedSegments;
+        return null; // TODO: Delete me
     }
 
     private Set<Scoring> getScoringDependentScorings(String scoringId) {
