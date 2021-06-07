@@ -73,6 +73,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private boolean segmentProfileUpdateByQuery = false;
     private boolean sendProfileUpdateEventForSegmentUpdate = true;
     private int maximumIdsQueryCount = 5000;
+    private int maxStoreSegments = 3000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
 
@@ -257,7 +258,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         c.setParameter("comparisonOperator", "equals");
         c.setParameter("propertyValue", storeId);
 
-        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class);
+        // TODO: Handle more than maxStoreSegments for one store - JIRA-4768
+        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class, 0, maxStoreSegments).getList();
         for (Segment segment : storeSegments) {
             definitionsService.resolveConditionType(segment.getCondition());
         }
