@@ -270,7 +270,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         updateExistingProfilesForSegment(segment, false);
     }
 
-    protected void saveSegment(Segment segment) {
+    @Override
+    public void saveSegment(Segment segment) {
         definitionsService.resolveConditionType(segment.getCondition());
         persistenceService.validateCondition(segment.getCondition(), new Profile());
         if (segment.getMetadata().isEnabled() && !segment.getMetadata().isMissingPlugins()) {
@@ -931,7 +932,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    protected void updateExistingProfilesForSegment(Segment segment, boolean isInitiatedBySystem) {
+    @Override
+    public void updateExistingProfilesForSegment(Segment segment, boolean isInitiatedBySystem) {
         try {
             long updateProfilesForSegmentStartTime = System.currentTimeMillis();
             long updatedProfileCount = 0;
