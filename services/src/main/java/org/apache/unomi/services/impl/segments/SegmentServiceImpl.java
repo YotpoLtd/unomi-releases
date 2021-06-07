@@ -549,7 +549,16 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public List<Metadata> getSegmentMetadatasForProfile(Profile profile) {
-        return null; // TODO: Delete me
+        List<Metadata> metadatas = new ArrayList<>();
+
+        List<Segment> allSegments = this.allSegments;
+        for (Segment segment : allSegments) {
+            if (persistenceService.testMatch(segment.getCondition(), profile)) {
+                metadatas.add(segment.getMetadata());
+            }
+        }
+
+        return metadatas;
     }
 
     public PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy) {
@@ -677,7 +686,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private Set<Segment> getScoringDependentSegments(String scoringId) {
-        return null; // TODO: Delete me
+        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
+        for (Segment segment : this.allSegments) {
+            if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
+                impactedSegments.add(segment);
+            }
+        }
+        return impactedSegments;
     }
 
     private Set<Scoring> getScoringDependentScorings(String scoringId) {
