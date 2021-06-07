@@ -362,8 +362,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private Set<Segment> getSegmentDependentSegments(String segmentId) {
-        Set<Segment> impactedSegments = new HashSet<>(allSegments.size());
-        for (Segment segment : allSegments) {
+        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
+        for (Segment segment : this.allSegments) {
             if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
                 impactedSegments.add(segment);
             }
