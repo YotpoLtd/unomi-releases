@@ -522,9 +522,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
         String store = (String) profile.getProperty("storeId");
-
-        // TODO: Throw exception if store-id is null once we change the segment evaluation rule to run on cdp event
-        //  instead update profile event - JIRA-4737
+        
         List<Segment> storeSegments = store == null ? new ArrayList<>() : getStoreSegments(store);
         for (Segment segment : storeSegments) {
             if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
