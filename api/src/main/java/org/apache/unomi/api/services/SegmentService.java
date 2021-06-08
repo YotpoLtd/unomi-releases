@@ -234,4 +234,18 @@ public interface SegmentService {
      * @return
      */
     String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
+
+    /**
+     * Saves a segment to database.
+     *
+     * @param segment The segment to persist.
+     */
+    void saveSegment(Segment segment);
+
+    /**
+     * Evaluates profiles for segment and adds or removes segments from profile if it's qualified.
+     * @param segment - segment to evaluate.
+     * @param isInitiatedBySystem - specify whether the action was initiated by system (or not).
+     */
+    void updateExistingProfilesForSegment(Segment segment, boolean isInitiatedBySystem);
 }
