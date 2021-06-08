@@ -252,7 +252,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return allItems;
     }
 
-    private List<Segment> getStoreSegments(String storeId) {
+    public List<Segment> getStoreSegments(String storeId) {
         Condition c = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
         c.setParameter("propertyName", "condition.parameterValues.storeId");
         c.setParameter("comparisonOperator", "equals");
