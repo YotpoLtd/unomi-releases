@@ -88,7 +88,7 @@ public class ParserHelper {
         return result;
     }
 
-    private void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+    public void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
         visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
@@ -165,7 +165,7 @@ public class ParserHelper {
         return conditionHooks;
     }
 
-    interface ConditionVisitor {
+    public interface ConditionVisitor {
         void visit(Condition condition);
     }
 }
