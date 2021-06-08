@@ -72,6 +72,14 @@ public interface SegmentService {
     PartialList<Metadata> getSegmentMetadatas(Query query);
 
     /**
+      * Retrieves the segments of a spedific store
+      *
+      * @param storeId the store
+      * @return a {@link List} of segments
+      */
+    List<Segment> getStoreSegments(String storeId);
+    
+    /**
      * Retrieves the segment identified by the specified identifier.
      *
      * @param segmentId the identifier of the segment to be retrieved

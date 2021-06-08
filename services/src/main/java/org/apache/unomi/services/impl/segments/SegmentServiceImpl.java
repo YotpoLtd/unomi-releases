@@ -73,6 +73,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private boolean segmentProfileUpdateByQuery = false;
     private boolean sendProfileUpdateEventForSegmentUpdate = true;
     private int maximumIdsQueryCount = 5000;
+    private int maxStoreSegments = 3000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
 
@@ -249,6 +250,20 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             definitionsService.resolveConditionType(segment.getCondition());
         }
         return allItems;
+    }
+
+    public List<Segment> getStoreSegments(String storeId) {
+        Condition c = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        c.setParameter("propertyName", "condition.parameterValues.storeId");
+        c.setParameter("comparisonOperator", "equals");
+        c.setParameter("propertyValue", storeId);
+
+        // TODO: Handle more than maxStoreSegments for one store - JIRA-4768
+        List<Segment> storeSegments = persistenceService.query(c, null, Segment.class, 0, maxStoreSegments).getList();
+        for (Segment segment : storeSegments) {
+            definitionsService.resolveConditionType(segment.getCondition());
+        }
+        return storeSegments;
     }
 
     public Segment getSegmentDefinition(String segmentId) {
@@ -506,9 +521,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
-
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
+        String store = (String) profile.getProperty("storeId");
+        
+        List<Segment> storeSegments = store == null ? new ArrayList<>() : getStoreSegments(store);
+        for (Segment segment : storeSegments) {
             if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                 segments.add(segment.getMetadata().getId());
             }
