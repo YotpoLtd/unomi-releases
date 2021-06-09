@@ -315,11 +315,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return results;
     }
 
-    private List<Segment> getStoreSegments(String storeId) {
-        // TODO: replace this when real feature is merged
-        return getAllSegmentDefinitions();
-    }
-
     private boolean checkSegmentDeletionImpact(Condition condition, String segmentToDeleteId) {
         if (condition != null) {
             @SuppressWarnings("unchecked")
