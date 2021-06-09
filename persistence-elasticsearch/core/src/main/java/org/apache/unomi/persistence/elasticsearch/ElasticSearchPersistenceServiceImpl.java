@@ -1101,7 +1101,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
         }
         if (response.getNoops() > 0) {
-            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
+            logger.warn("Update with query and script ended with {} noops!", response.getNoops());
         }
 
         return response;

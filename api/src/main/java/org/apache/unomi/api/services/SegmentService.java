@@ -239,8 +239,9 @@ public interface SegmentService {
      * Saves a segment to database.
      *
      * @param segment The segment to persist.
+     * @param alwaysOverwrite Specify if overwrite in case of version-conflict
      */
-    void saveSegment(Segment segment);
+    boolean saveSegment(Segment segment, boolean alwaysOverwrite);
 
     /**
      * Evaluates profiles for segment and adds or removes segments from profile if it's qualified.
@@ -248,4 +249,11 @@ public interface SegmentService {
      * @param isInitiatedBySystem - specify whether the action was initiated by system (or not).
      */
     void updateExistingProfilesForSegment(Segment segment, boolean isInitiatedBySystem);
+
+    /**
+     * Updates segment evaluation status.
+     * @param segment segment to update the status.
+     * @param status status to set in segment.
+     */
+    void updateSegmentEvaluationStatus(Segment segment, Segment.EvaluationStatus status);
 }
