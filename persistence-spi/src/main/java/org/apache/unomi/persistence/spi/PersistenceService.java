@@ -264,19 +264,6 @@ public interface PersistenceService {
     <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);
 
     /**
-     * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
-     *
-     * @param <T>      the type of the Item subclass we want to retrieve
-     * @param itemId   the identifier of the item we want to retrieve
-     * @param includes configure source inclusion for specific fields
-     * @param excludes configure source exclusion for specific fields
-     * @param dateHint a Date helping in identifying where the item is located
-     * @param clazz    the {@link Item} subclass of the item we want to retrieve
-     * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
-     */
-    <T extends Item> T load(String itemId, Date dateHint, String[] includes, String[] excludes, Class<T> clazz);
-
-    /**
      *
      * @param dateHint a Date helping in identifying where the item is located
      * @param clazz    the {@link Item} subclass of the item we want to retrieve

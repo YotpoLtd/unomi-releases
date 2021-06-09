@@ -744,7 +744,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final String[] includes, final String[] excludes, final Class<T> clazz) {
-        return load(itemId, null, includes, excludes, clazz);
+        List<T> itemList = load(null, clazz,  includes, excludes, itemId);
+        return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
     }
 
 
@@ -816,12 +817,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
         List<T> itemList = load(dateHint, clazz,  null, null, itemId);
-        return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
-    }
-
-    @Override
-    public <T extends Item> T load(final String itemId, final Date dateHint, String[] includes, String[] excludes,  final Class<T> clazz) {
-        List<T> itemList = load(dateHint, clazz,  includes, excludes, itemId);
         return (itemList != null && !itemList.isEmpty()) ? itemList.get(0) : null;
     }
 
