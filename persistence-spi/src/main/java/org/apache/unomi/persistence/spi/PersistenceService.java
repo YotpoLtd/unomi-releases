@@ -243,6 +243,18 @@ public interface PersistenceService {
     /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
      *
+     * @param <T>    the type of the Item subclass we want to retrieve
+     * @param itemId the identifier of the item we want to retrieve
+     * @param includes configure source inclusion for specific fields
+     * @param excludes configure source exclusion for specific fields
+     * @param clazz  the {@link Item} subclass of the item we want to retrieve
+     * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
+     */
+    <T extends Item> T load(String itemId, String[] includes, String[] excludes, Class<T> clazz);
+
+    /**
+     * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
+     *
      * @param <T>      the type of the Item subclass we want to retrieve
      * @param itemId   the identifier of the item we want to retrieve
      * @param dateHint a Date helping in identifying where the item is located
@@ -255,11 +267,13 @@ public interface PersistenceService {
      *
      * @param dateHint a Date helping in identifying where the item is located
      * @param clazz    the {@link Item} subclass of the item we want to retrieve
+     * @param includes configure source inclusion for specific fields
+     * @param excludes configure source exclusion for specific fields
      * @param itemId   the identifier of the item we want to retrieve
      * @param <T>      the type of the Item subclass we want to retrieve
      * @return A list of Items identified with the specified identifiers and with the specified Item subclass if exist, empty {@link List} otherwise
      */
-    <T extends Item> List<T> load(Date dateHint, Class<T> clazz, String... itemId);
+    <T extends Item> List<T> load(Date dateHint, Class<T> clazz, String[] includes, String[] excludes, String... itemId);
 
 
     /**
