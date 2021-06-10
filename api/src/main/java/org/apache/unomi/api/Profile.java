@@ -53,8 +53,6 @@ public class Profile extends Item {
 
     private Set<String> segments = new HashSet<>();
 
-    private Set<String> lists = new HashSet<>();
-
     private Map<String, Integer> scores;
 
     private String mergedWith;
@@ -202,25 +200,6 @@ public class Profile extends Item {
         this.segments = segments;
     }
 
-
-    /**
-     * Retrieves the identifiers of the lists this profile is a member of.
-     *
-     * @return the identifiers of the lists this profile is a member of
-     */
-    public Set<String> getLists() {
-        return lists;
-    }
-
-    /**
-     * Sets the identifiers of the lists this profile is a member of.
-     *
-     * @param lists the lists
-     */
-    public void setLists(Set<String> lists) {
-        this.lists = lists;
-    }
-
     /**
      * Retrieves the identifier of the profile this profile is merged with if any.
      *
@@ -310,7 +289,6 @@ public class Profile extends Item {
         sb.append("properties=").append(properties);
         sb.append(", systemProperties=").append(systemProperties);
         sb.append(", segments=").append(segments);
-        sb.append(", lists=").append(lists);
         sb.append(", scores=").append(scores);
         sb.append(", mergedWith='").append(mergedWith).append('\'');
         sb.append(", consents=").append(consents);
