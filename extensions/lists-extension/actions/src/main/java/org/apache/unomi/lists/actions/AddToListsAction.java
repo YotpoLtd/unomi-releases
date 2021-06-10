@@ -23,7 +23,9 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * A rule action that can add a profile to a list
@@ -49,19 +51,20 @@ public class AddToListsAction implements ActionExecutor {
         }
         Profile profile = event.getProfile();
 
-        Set<String> existingListIdentifiers = profile.getLists();
+        List<String> existingListIdentifiers = (List<String>) profile.getSystemProperties().get("lists");
         if (existingListIdentifiers == null) {
-            existingListIdentifiers = new HashSet<>();
+            existingListIdentifiers = new ArrayList<>();
         }
-        int existingListIdentifiersInitialSize = existingListIdentifiers.size();
         boolean listsChanged = false;
-        existingListIdentifiers.addAll(newListIdentifiers);
-        if (existingListIdentifiersInitialSize != existingListIdentifiers.size()){
-            listsChanged = true;
+        for (String newListIdentifier : newListIdentifiers) {
+            if (!existingListIdentifiers.contains(newListIdentifier)) {
+                existingListIdentifiers.add(newListIdentifier);
+                listsChanged = true;
+            }
         }
 
         if (listsChanged) {
-            profile.setLists(existingListIdentifiers);
+            profile.getSystemProperties().put("lists", existingListIdentifiers);
             Event profileUpdated = new Event("profileUpdated", null, profile, event.getScope(), null, profile, new Date());
             profileUpdated.setPersistent(false);
             eventService.send(profileUpdated);
