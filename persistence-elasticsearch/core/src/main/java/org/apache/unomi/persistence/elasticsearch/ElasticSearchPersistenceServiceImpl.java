@@ -1758,8 +1758,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     searchSourceBuilder.version(true);
                     searchRequest.source(searchSourceBuilder);
 
+                    long beforeSearch = System.currentTimeMillis();
                     SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-
+                    long afterSearch = System.currentTimeMillis();
+                    long diff = afterSearch - beforeSearch;
+                    if (diff > 1000 && clazz.getSimpleName().equals("Profile")) {
+                        logger.warn("ES query took more than 1 second. Call was:" + searchRequest + ". Took: " + diff + " millis");
+                    }
                     if (size == -1) {
                         // Scroll until no more hits are returned
                         while (true) {
