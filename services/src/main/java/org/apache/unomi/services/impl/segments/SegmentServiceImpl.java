@@ -1215,7 +1215,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     logger.info("running scheduled task to recalculate segments with DateExpr condition, found {} segments", dateExprSegments.size());
 //                    dateExprSegments.forEach(segment -> updateExistingProfilesForSegment(segment, true));
                     //TODO remove after timbeBased segments were migrated by yotpoCondition to have timeBased customTag
-                    dateExprSegments.forEach(segment -> setSegmentDefinition(segment));
+                    dateExprSegments.forEach(segment -> {
+                        try {
+                            setSegmentDefinition(segment);
+                        } catch (Exception e) {
+                            logger.error("Error while updating profiles for DateExpr conditions for segmentId={}", segment.getItemId(), e);
+                        }
+                    });
                     logger.info("finished recalculate segments with DateExpr conditions in {}ms. ", System.currentTimeMillis() - dateExprTaskStartTime);
                 } catch (Throwable t) {
                     logger.error("Error while updating profiles for DateExpr conditions", t);
