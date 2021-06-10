@@ -1762,7 +1762,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
                     long afterSearch = System.currentTimeMillis();
                     long diff = afterSearch - beforeSearch;
-                    if (diff > 1000 && clazz.getSimpleName().equals("Profile")) {
+                    if (diff > 1000 && clazz != null && clazz.getSimpleName().equals("Profile")) {
                         logger.warn("ES query took more than 1 second. Call was:" + searchRequest + ". Took: " + diff + " millis");
                     }
                     if (size == -1) {
