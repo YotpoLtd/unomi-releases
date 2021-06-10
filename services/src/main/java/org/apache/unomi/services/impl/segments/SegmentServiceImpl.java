@@ -297,11 +297,15 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private void validateSegmentDependencies(Segment segment) {
         List<String> dependencySegmentIDs = collectAllSegmentDependencies(segment.getCondition());
-        List<Segment> storeSegments = getStoreSegments((String) segment.getCondition().getParameterValues().get("storeId"));
+        List<Segment> storeSegments = getStoreSegments(storeId(segment));
         List<String> storeSegmentIds = storeSegments.stream().map(s -> s.getItemId()).collect(Collectors.toList());
         dependencySegmentIDs.removeAll(storeSegmentIds);
         if (!dependencySegmentIDs.isEmpty())
             throw new UnsupportedOperationException("can't create a dependency on non existing segments:" + dependencySegmentIDs);
+    }
+
+    private String storeId(Segment segment) {
+        return (String) segment.getCondition().getParameterValues().get("storeId");
     }
 
     private List<String> collectAllSegmentDependencies(Condition condition) {
@@ -417,9 +421,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public DependentMetadata removeSegmentDefinition(String segmentId, boolean validate) {
-        Set<Segment> impactedSegments = getSegmentDependentSegments(segmentId);
+        Set<Segment> impactedSegments = allSegmentDependencies(segmentId);
         Set<Scoring> impactedScorings = getSegmentDependentScorings(segmentId);
-
+        if (validate) {
+            if (!impactedSegments.isEmpty()) {
+                List<String> impactedSegmentIds = impactedSegments.stream().map(s -> s.getItemId()).collect(Collectors.toList());
+                throw new UnsupportedOperationException(String.format("failed to delete segment with id=%s because of existing dependencies:%s",segmentId, impactedSegmentIds));
+            }
+        }
         if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
             removeSegmentFromProfiles(segmentId);
 
@@ -458,6 +467,20 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
 
         return getDependentMetadata(impactedSegments, impactedScorings);
+    }
+
+    private Set<Segment> allSegmentDependencies(String segmentId) {
+        Set<Segment> result = new HashSet<>();
+        Segment segment = getSegmentDefinition(segmentId);
+        if (segment != null) {
+            List<Segment> allStoreSegments = getStoreSegments(storeId(segment));
+            result = allStoreSegments
+                    .stream()
+                    .filter(s -> collectAllSegmentDependencies(s.getCondition()).contains(segmentId))
+                    .collect(Collectors.toSet());
+
+        }
+        return result;
     }
 
     private void removeSegmentFromProfiles(String segmentId) {
