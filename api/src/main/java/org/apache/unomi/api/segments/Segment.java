@@ -81,6 +81,10 @@ public class Segment extends MetadataItem {
         this.status = status;
     }
 
+    public String storeId() {
+        return (String) getCondition().getParameterValues().get("storeId");
+    }
+
     public enum EvaluationStatus {
         IN_PROGRESS_USER,
         IN_PROGRESS_SYSTEM,

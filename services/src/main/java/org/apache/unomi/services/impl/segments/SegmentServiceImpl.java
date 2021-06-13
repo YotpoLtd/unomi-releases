@@ -297,7 +297,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private void validateSegmentDependencies(Segment segment) {
         List<String> dependencySegmentIDs = collectAllSegmentDependencies(segment.getCondition());
-        List<Segment> storeSegments = getStoreSegments((String) segment.getCondition().getParameterValues().get("storeId"));
+        List<Segment> storeSegments = getStoreSegments(segment.storeId());
         List<String> storeSegmentIds = storeSegments.stream().map(s -> s.getItemId()).collect(Collectors.toList());
         dependencySegmentIDs.removeAll(storeSegmentIds);
         if (!dependencySegmentIDs.isEmpty())
@@ -417,9 +417,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public DependentMetadata removeSegmentDefinition(String segmentId, boolean validate) {
-        Set<Segment> impactedSegments = getSegmentDependentSegments(segmentId);
+        Set<Segment> impactedSegments = allSegmentsThatDependOn(segmentId);
         Set<Scoring> impactedScorings = getSegmentDependentScorings(segmentId);
-
+        if (validate) {
+            if (!impactedSegments.isEmpty()) {
+                List<String> impactedSegmentIds = impactedSegments.stream().map(s -> s.getItemId()).collect(Collectors.toList());
+                throw new UnsupportedOperationException(String.format("failed to delete segment with id=%s because of existing dependencies:%s",segmentId, impactedSegmentIds));
+            }
+        }
         if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
             removeSegmentFromProfiles(segmentId);
 
@@ -458,6 +463,20 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
 
         return getDependentMetadata(impactedSegments, impactedScorings);
+    }
+
+    private Set<Segment> allSegmentsThatDependOn(String segmentId) {
+        Set<Segment> result = new HashSet<>();
+        Segment segment = getSegmentDefinition(segmentId);
+        if (segment != null) {
+            List<Segment> allStoreSegments = getStoreSegments(segment.storeId());
+            result = allStoreSegments
+                    .stream()
+                    .filter(s -> collectAllSegmentDependencies(s.getCondition()).contains(segmentId))
+                    .collect(Collectors.toSet());
+
+        }
+        return result;
     }
 
     private void removeSegmentFromProfiles(String segmentId) {
