@@ -25,6 +25,7 @@ Apache Unomi
 Apache Unomi stores user profile information and is mostly used to provide a backend server for A/B testing and 
 personalization. To do so it implements the currently under development OASIS Context Server specification. 
 
+
 License
 -------
 The source code is available under the Apache License V2
@@ -33,3 +34,5 @@ Documentation
 -------------
 You can find all the updated documentation, including building and deployment instructions, on the [Apache Unomi 
 web site](https://unomi.apache.org).
+
+***
