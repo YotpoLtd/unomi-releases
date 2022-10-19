@@ -46,6 +46,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private PrivacyService privacyService;
     private ConfigSharingService configSharingService;
 
+    private int maxProfilesInOneMerge = -1;
+
     public int execute(Action action, Event event) {
         if (event.getAttributes().get("alreadyMerged") != null && (boolean) event.getAttributes().get("alreadyMerged")  == true) {
             return EventService.NO_CHANGE;
@@ -281,6 +283,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
+    }
+
+    public void setMaxProfilesInOneMerge(String maxProfilesInOneMerge) {
+        this.maxProfilesInOneMerge = Integer.parseInt(maxProfilesInOneMerge);
     }
 
 }
